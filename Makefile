@@ -21,21 +21,28 @@ else
     CFLAGS=${GCC_CFLAGS}
   endif
 endif
-SRCS = main.c util.c nodes.c interpreter.c
+LEX=flex
+SRCS = util.c nodes.c interpreter.c errormsg.c
 DEBUG_FLAGS=-O2 -g -rdynamic
-RELEASE_FLAGS=-O3 -DNDEBUG -Wno-unused-function
+#RELEASE_FLAGS=-O3 -DNDEBUG -Wno-unused-function
 BUILD_DIR=bin
-BUILD_FILE_RELEASE=tigerc
-BUILD_FILE_DEBUG=tigerc
+BUILD_FILE_LEXER_DEBUG=tigerc_lex
+BUILD_FILE_INTERPRETER_DEBUG=tigerc_interp
 
 # default
-.PHONY: debug
-debug: build
-	${CC} ${CFLAGS} $(SRCS) ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_DEBUG}
+.PHONY: lexer
+lexer: build lex.yy.o
+	${CC} ${CFLAGS} $(SRCS) lex_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_LEXER_DEBUG}
 
-.PHONY: release
-release: build
-	${CC} ${CFLAGS} $(SRCS) ${RELEASE_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_RELEASE}
+lex.yy.c: tiger.l
+	${LEX} tiger.l
+
+lex.yy.o: lex.yy.c tokens.h errormsg.h util.h
+	${CC} -O2 -g -c lex.yy.c
+
+.PHONY: interpreter
+interpreter: build lex.yy.o
+	${CC} ${CFLAGS} $(SRCS) interpreter_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_INTERPRETER_DEBUG}
 
 .PHONY: build
 build:
@@ -45,4 +52,5 @@ build:
 clean:
 	rm -rf ${BUILD_DIR}
 	rm -f *.o
+	rm lex.yy.c
 

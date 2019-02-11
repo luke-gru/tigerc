@@ -1,5 +1,10 @@
 #include "nodes.h"
 #include "interpreter.h"
+#include "util.h"
+#include "errormsg.h"
+#include "tokens.h"
+
+YYSTYPE yylval;
 
 int main(int argc, char *argv[]) {
     Stmt prog = CompoundStmt(
