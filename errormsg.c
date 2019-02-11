@@ -57,10 +57,18 @@ void EM_reset(string fname) {
     anyErrors = false;
     fileName = fname;
     lineNum = 1;
-    linePos = intList(0,NULL);
+    linePos = intList(0, NULL);
     yyin = fopen(fname,"r");
     if (!yyin) {
         EM_error(0, "cannot open");
         exit(1);
     }
+}
+
+void EM_fset(FILE *f, string fname) {
+    anyErrors = false;
+    fileName = fname;
+    lineNum = 1;
+    linePos = intList(0, NULL);
+    yyin = f;
 }

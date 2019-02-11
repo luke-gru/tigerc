@@ -1,3 +1,6 @@
+#ifndef tiger_tokens_h
+#define tiger_tokens_h
+
 typedef union  {
     int pos;
     int ival;
@@ -48,3 +51,5 @@ extern YYSTYPE yylval;
 # define FUNCTION 297
 # define VAR 298
 # define TYPE 299
+
+#endif

@@ -43,4 +43,5 @@ for    { adjust(); return FOR; }
             yylval.ival = atoi(yytext);
             return INT;
           }
+("--"[a-z]*"\n")|("\t")+    { adjust(); }
 .      { adjust(); EM_error(EM_tokPos, "illegal token"); }

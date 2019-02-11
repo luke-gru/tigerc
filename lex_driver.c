@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "util.h"
 #include "errormsg.h"
 #include "tokens.h"
@@ -24,11 +25,15 @@ static string tokname(int tok) {
 int main(int argc, char **argv) {
     string fname; int tok;
     if (argc!=2) {
-        fprintf(stderr,"usage: a.out filename\n");
+        fprintf(stderr,"usage: a.out FILENAME|-\n");
         exit(1);
     }
     fname = argv[1];
-    EM_reset(fname);
+    if (strcmp(fname, "-") == 0) {
+        EM_fset(stdin, "stdin");
+    } else {
+        EM_reset(fname);
+    }
     for(;;) {
         tok=yylex();
         if (tok==0) break;
