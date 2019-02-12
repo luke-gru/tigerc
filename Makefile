@@ -22,17 +22,18 @@ else
   endif
 endif
 LEX=flex
-SRCS = util.c nodes.c interpreter.c errormsg.c
+COMMON_SRCS = util.c errormsg.c
 DEBUG_FLAGS=-O2 -g -rdynamic
 #RELEASE_FLAGS=-O3 -DNDEBUG -Wno-unused-function
 BUILD_DIR=bin
 BUILD_FILE_LEXER_DEBUG=tigerc_lex
 BUILD_FILE_INTERPRETER_DEBUG=tigerc_interp
+BUILD_FILE_PARSER_DEBUG=tigerc_parse
 
 # default
 .PHONY: lexer
 lexer: build lex.yy.o
-	${CC} ${CFLAGS} $(SRCS) lex_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_LEXER_DEBUG}
+	${CC} ${CFLAGS} $(COMMON_SRCS) nodes.c lex_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_LEXER_DEBUG}
 
 lex.yy.c: tiger.l
 	${LEX} tiger.l
@@ -40,9 +41,19 @@ lex.yy.c: tiger.l
 lex.yy.o: lex.yy.c tokens.h errormsg.h util.h
 	${CC} -O2 -g -c lex.yy.c
 
+y.tab.c: parse.y
+	yacc -dv parse.y
+
+y.tab.o: y.tab.c
+	${CC} -O2 -g -c y.tab.c
+
 .PHONY: interpreter
 interpreter: build lex.yy.o
-	${CC} ${CFLAGS} $(SRCS) interpreter_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_INTERPRETER_DEBUG}
+	${CC} ${CFLAGS} $(COMMON_SRCS) nodes.c interpreter.c interpreter_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_INTERPRETER_DEBUG}
+
+.PHONY: parser
+parser: build y.tab.o lex.yy.o
+	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c parser_driver.c y.tab.o lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_PARSER_DEBUG}
 
 .PHONY: build
 build:
@@ -53,4 +64,7 @@ clean:
 	rm -rf ${BUILD_DIR}
 	rm -f *.o
 	rm lex.yy.c
+	rm y.tab.c
+	rm y.tab.h
+	rm y.output
 
