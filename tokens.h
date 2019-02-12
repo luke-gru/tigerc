@@ -1,7 +1,9 @@
 #ifndef tiger_tokens_h
 #define tiger_tokens_h
 
-typedef union  {
+#include "util.h"
+
+typedef union {
     int pos;
     int ival;
     string sval;

@@ -64,7 +64,7 @@ N_Expr StringExpr(Pos pos, string s) {
     return p;
 }
 
-N_Expr CallExpr(Pos pos, Symbol func, N_ExprList args) {
+N_Expr CallExpr(Pos pos, Symbol func, List args) {
     N_Expr p = CHECKED_MALLOC(struct sExpr);
     p->kind=tCallExpr;
     p->pos=pos;
@@ -73,7 +73,7 @@ N_Expr CallExpr(Pos pos, Symbol func, N_ExprList args) {
     return p;
 }
 
-N_Expr OpExpr(Pos pos, Op op, N_Expr left, N_Expr right) {
+N_Expr OpExpr(Pos pos, N_Expr left, Op op, N_Expr right) {
     N_Expr p = CHECKED_MALLOC(struct sExpr);
     p->kind=tOpExpr;
     p->pos=pos;
@@ -83,7 +83,7 @@ N_Expr OpExpr(Pos pos, Op op, N_Expr left, N_Expr right) {
     return p;
 }
 
-N_Expr RecordExpr(Pos pos, Symbol ty, N_EFieldList fields) {
+N_Expr RecordExpr(Pos pos, Symbol ty, List fields) {
     N_Expr p = CHECKED_MALLOC(struct sExpr);
     p->kind=tRecordExpr;
     p->pos=pos;
@@ -92,7 +92,7 @@ N_Expr RecordExpr(Pos pos, Symbol ty, N_EFieldList fields) {
     return p;
 }
 
-N_Expr SeqExpr(Pos pos, N_ExprList seq) {
+N_Expr SeqExpr(Pos pos, List seq) {
     N_Expr p = CHECKED_MALLOC(struct sExpr);
     p->kind=tSeqExpr;
     p->pos=pos;
@@ -147,7 +147,7 @@ N_Expr BreakExpr(Pos pos) {
     return p;
 }
 
-N_Expr LetExpr(Pos pos, N_DeclList decls, N_Expr body) {
+N_Expr LetExpr(Pos pos, List decls, N_Expr body) {
     N_Expr p = CHECKED_MALLOC(struct sExpr);
     p->kind=tLetExpr;
     p->pos=pos;
@@ -166,11 +166,11 @@ N_Expr ArrayExpr(Pos pos, Symbol ty, N_Expr size, N_Expr init) {
     return p;
 }
 
-N_Decl FunctionDecl(Pos pos, N_FunDeclList function) {
+N_Decl FunctionDecl(Pos pos, List functions) {
     N_Decl p = CHECKED_MALLOC(struct sDecl);
     p->kind=tFunctionDecl;
     p->pos=pos;
-    p->as.function=function;
+    p->as.functions=functions;
     return p;
 }
 
@@ -185,11 +185,11 @@ N_Decl VarDecl(Pos pos, Symbol var, Symbol ty, N_Expr init) {
     return p;
 }
 
-N_Decl TypeDecl(Pos pos, N_NameTypeList type) {
+N_Decl TypesDecl(Pos pos, List types) {
     N_Decl p = CHECKED_MALLOC(struct sDecl);
-    p->kind=tTypeDecl;
+    p->kind=tTypesDecl;
     p->pos=pos;
-    p->as.ty=type;
+    p->as.types=types;
     return p;
 }
 
@@ -201,7 +201,7 @@ N_Type NameType(Pos pos, Symbol name) {
     return p;
 }
 
-N_Type RecordType(Pos pos, N_FieldList record) {
+N_Type RecordType(Pos pos, List record) {
     N_Type p = CHECKED_MALLOC(struct sType);
     p->kind=tRecordTy;
     p->pos=pos;
@@ -226,21 +226,7 @@ N_Field Field(Pos pos, Symbol name, Symbol ty) {
     return p;
 }
 
-N_FieldList FieldList(N_Field head, N_FieldList tail) {
-    N_FieldList p = CHECKED_MALLOC(struct sFieldList);
-    p->head=head;
-    p->tail=tail;
-    return p;
-}
-
-N_ExprList ExprList(N_Expr head, N_ExprList tail) {
-    N_ExprList p = CHECKED_MALLOC(struct sExprList);
-    p->head=head;
-    p->tail=tail;
-    return p;
-}
-
-N_FunDecl FunDecl(Pos pos, Symbol name, N_FieldList params, Symbol result,
+N_FunDecl FunDecl(Pos pos, Symbol name, List params, Symbol result,
 		  N_Expr body) {
     N_FunDecl p = CHECKED_MALLOC(struct sFunDecl);
     p->pos=pos;
@@ -251,44 +237,19 @@ N_FunDecl FunDecl(Pos pos, Symbol name, N_FieldList params, Symbol result,
     return p;
 }
 
-N_FunDeclList FunDeclList(N_FunDecl head, N_FunDeclList tail) {
-    N_FunDeclList p = CHECKED_MALLOC(struct sFunDeclList);
-    p->head=head;
-    p->tail=tail;
-    return p;
-}
-
-N_DeclList DeclList(N_Decl head, N_DeclList tail) {
-    N_DeclList p = CHECKED_MALLOC(struct sDeclList);
-    p->head=head;
-    p->tail=tail;
-    return p;
-}
-
-N_NameType NamedType(Symbol name, N_Type ty) {
+N_NameType NamedType(Pos pos, Symbol name, N_Type ty) {
     N_NameType p = CHECKED_MALLOC(struct sNameType);
+    p->pos = pos;
     p->name=name;
     p->ty=ty;
     return p;
 }
 
-N_NameTypeList NameTypeList(N_NameType head, N_NameTypeList tail) {
-    N_NameTypeList p = CHECKED_MALLOC(struct sNameTypeList);
-    p->head=head;
-    p->tail=tail;
-    return p;
-}
-
-N_EField EField(Symbol name, N_Expr expr) {
+N_EField EField(Pos pos, Symbol name, N_Expr expr) {
     N_EField p = CHECKED_MALLOC(struct sEField);
+    p->pos = pos;
     p->name=name;
     p->expr=expr;
     return p;
 }
 
-N_EFieldList EFieldList(N_EField head, N_EFieldList tail) {
-    N_EFieldList p = CHECKED_MALLOC(struct sEFieldList);
-    p->head=head;
-    p->tail=tail;
-    return p;
-}

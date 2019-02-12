@@ -22,6 +22,7 @@ else
   endif
 endif
 LEX=flex
+YACC=bison
 COMMON_SRCS = util.c errormsg.c
 DEBUG_FLAGS=-O2 -g -rdynamic
 #RELEASE_FLAGS=-O3 -DNDEBUG -Wno-unused-function
@@ -42,7 +43,7 @@ lex.yy.o: lex.yy.c tokens.h errormsg.h util.h
 	${CC} -O2 -g -c lex.yy.c
 
 y.tab.c: parse.y
-	yacc -dv parse.y
+	${YACC} -dv parse.y
 
 y.tab.o: y.tab.c
 	${CC} -O2 -g -c y.tab.c
