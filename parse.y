@@ -19,7 +19,7 @@ static N_Expr _program;
     int pos;
     int num;
     string str;
-    /*list_t list;*/
+    List list;
     Symbol sym;
     N_Decl decl;
     N_Expr expr;

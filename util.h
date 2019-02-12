@@ -7,8 +7,28 @@
 
 typedef char *string;
 
+struct sList {
+    union {
+        int i;
+        bool b;
+        void *data;
+    };
+    struct sList *next;
+};
+
+typedef struct sList *List;
+
 #define CHECKED_MALLOC(type) (type*)checked_malloc(sizeof(type));
 void *checked_malloc(size_t sz);
 string String(string);
+
+List DataList(void *data, List next);
+List IntList(int i, List next);
+List BoolList(bool b, List next);
+
+// append list2 to end of list1
+List JoinList(List list1, List list2);
+// append new data list element to end of list
+List JoinData(List list, void *data);
 
 #endif

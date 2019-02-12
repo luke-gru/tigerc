@@ -17,30 +17,21 @@ int EM_tokPos = 0;
 
 extern FILE *yyin;
 
-typedef struct intList {int i; struct intList *rest;} *IntList;
-
-static IntList intList(int i, IntList rest) {
-    IntList l = CHECKED_MALLOC(struct intList);
-    l->i = i;
-    l->rest = rest;
-    return l;
-}
-
-static IntList linePos = NULL;
+static List linePos = NULL;
 
 void EM_newline(void) {
     lineNum++;
-    linePos = intList(EM_tokPos, linePos);
+    linePos = IntList(EM_tokPos, linePos);
 }
 
 void EM_error(int pos, char *message,...) {
     va_list ap;
-    IntList lines = linePos;
+    List lines = linePos;
     int num = lineNum;
 
     anyErrors = true;
     while (lines && lines->i >= pos) {
-        lines = lines->rest;
+        lines = lines->next;
         num--;
     }
 
@@ -57,7 +48,7 @@ void EM_reset(string fname) {
     anyErrors = false;
     fileName = fname;
     lineNum = 1;
-    linePos = intList(0, NULL);
+    linePos = IntList(0, NULL);
     yyin = fopen(fname,"r");
     if (!yyin) {
         EM_error(0, "cannot open");
@@ -69,6 +60,6 @@ void EM_fset(FILE *f, string fname) {
     anyErrors = false;
     fileName = fname;
     lineNum = 1;
-    linePos = intList(0, NULL);
+    linePos = IntList(0, NULL);
     yyin = f;
 }
