@@ -1,0 +1,45 @@
+/*
+ * types.h -
+ *
+ * All types and functions declared in this header file begin with "Ty_"
+ * Linked list types end with "..list"
+ */
+
+#ifndef tiger_types_h
+#define tiger_types_h
+
+#include "symbol.h"
+
+typedef struct sTy *Ty;
+typedef struct sTyField *TyField;
+
+struct sTy {
+    enum {
+        tTyRecord, tTyNil, tTyInt, tTyString, tTyArray,
+        tTyName, tTyVoid
+    } kind;
+
+    union {
+        List fields;
+        Ty array;
+        struct {Symbol sym; Ty ty;} name;
+    } as;
+};
+
+struct sTyField {Symbol name; Ty ty;};
+
+Ty Ty_Nil(void);
+Ty Ty_Int(void);
+Ty Ty_String(void);
+Ty Ty_Void(void);
+
+Ty Ty_Record(List fields);
+Ty Ty_Array(Ty ty);
+Ty Ty_Name(Symbol sym, Ty ty);
+
+TyField Ty_Field(Symbol name, Ty ty);
+
+void Ty_print(Ty t);
+void TyList_print(List tyList);
+
+#endif

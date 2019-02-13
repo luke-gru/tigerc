@@ -4,7 +4,7 @@
 #include "util.h"
 
 /*
- * symbol.h - Symbols and symbol-tables
+ * symbol.h - Symbols and symbol tables
  *
  */
 
@@ -23,8 +23,9 @@ Symbol GetSym(string);
 /* Extract the underlying string from a symbol */
 string SymName(Symbol);
 
-/* S_table is a mapping from S_symbol->any, where "any" is represented
- *     here by void*  */
+/* SymTable is a mapping from Symbol->any, where "any" is represented
+ * here by `void*`. `void*` holds either type information, or value (function, variable)
+ *  info */
 typedef struct sTable *SymTable;
 
 /* Make a new table */
