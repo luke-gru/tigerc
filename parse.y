@@ -6,6 +6,8 @@
 #include "symbol.h"
 #include "ast.h"
 
+#define YYDEBUG 1
+
 int yylex(void);
 void yyerror(char *msg);
 
@@ -63,31 +65,30 @@ static void print_token_value(FILE *fp, int type, YYSTYPE value);
             (target) = var; \
     } \
     while (false)
+
 %}
 
 %debug
 
-%token <str> ID STRING
-%token <num> INT
+%token <str> TK_ID TK_STRING
+%token <num> TK_INT
 
 %token <pos>
-  COMMA COLON SEMICOLON LPAREN RPAREN LBRACK RBRACK
-  LBRACE RBRACE DOT
-  PLUS MINUS TIMES DIVIDE EQ NEQ LT LE GT GE
-  AND OR ASSIGN
-  ARRAY IF THEN ELSE WHILE FOR TO DO LET IN END OF
-  BREAK NIL
-  FUNCTION VAR TYPE
+  TK_COMMA TK_COLON TK_LPAREN TK_RPAREN TK_LBRACK TK_RBRACK
+  TK_LBRACE TK_RBRACE TK_DOT
+  TK_ARRAY TK_IF TK_THEN TK_ELSE TK_WHILE TK_FOR TK_TO TK_LET TK_IN TK_END TK_OF
+  TK_BREAK TK_NIL
+  TK_FUNCTION TK_VAR TK_TYPE
 
-%left SEMICOLON
-%nonassoc DO
-%nonassoc  ASSIGN
-%left  OR
-%left  AND
-%nonassoc  EQ NEQ LT LE GT GE
-%left  PLUS MINUS
-%left  TIMES DIVIDE
-%left  UMINUS
+%left <pos> TK_SEMICOLON
+%nonassoc <pos> TK_DO
+%nonassoc <pos>  TK_ASSIGN
+%left <pos>  TK_OR
+%left <pos>  TK_AND
+%nonassoc <pos>  TK_EQ TK_NEQ TK_LT TK_LE TK_GT TK_GE
+%left <pos>  TK_PLUS TK_MINUS
+%left <pos>  TK_TIMES TK_DIVIDE
+%left <pos>  TK_UMINUS
 
 %type <decl> decl var_decl
 %type <expr> program expr
@@ -102,81 +103,83 @@ static void print_token_value(FILE *fp, int type, YYSTYPE value);
 
 %%
 
-program: expr { _program = $1; }
+program:
+    expr
+    { _program = $1; }
 
 expr:
     lvalue
     { $$ = VarExpr($1->pos, $1); }
-|   NIL
+|   TK_NIL
     { $$ = NilExpr($1); }
 |   expr expr_seq
     { $$ = SeqExpr($1->pos, DataList($1, $2)); }
-|   LPAREN RPAREN
+|   TK_LPAREN TK_RPAREN
     { $$ = SeqExpr($1, NULL); }
-|   LPAREN expr RPAREN
+|   TK_LPAREN expr TK_RPAREN
     { $$ = $2; }
-|   INT
+|   TK_INT
     { $$ = IntExpr(EM_tokPos, $1); }
-|   STRING
+|   TK_STRING
     { $$ = StringExpr(EM_tokPos, $1); }
-|   MINUS expr %prec UMINUS
+|   TK_MINUS expr %prec TK_UMINUS
     { $$ = OpExpr($1, $2, MinusOp, NULL); }
 
-|   id LPAREN RPAREN
+|   id TK_LPAREN TK_RPAREN
     { $$ = CallExpr($2, $1, NULL); }
-|   id LPAREN expr arg_seq RPAREN
+|   id TK_LPAREN expr arg_seq TK_RPAREN
     { $$ = CallExpr($2, $1, DataList($3, $4)); }
 
-|   expr PLUS expr
+|   expr TK_PLUS expr
     { $$ = OpExpr($2, $1, PlusOp, $3); }
-|   expr MINUS expr
+|   expr TK_MINUS expr
     { $$ = OpExpr($2, $1, MinusOp, $3); }
-|   expr TIMES expr
+|   expr TK_TIMES expr
     { $$ = OpExpr($2, $1, TimesOp, $3); }
-|   expr DIVIDE expr
+|   expr TK_DIVIDE expr
     { $$ = OpExpr($2, $1, DivideOp, $3); }
-|   expr EQ expr
+|   expr TK_EQ expr
     { $$ = OpExpr($2, $1, EqOp, $3); }
-|   expr NEQ expr
+|   expr TK_NEQ expr
     { $$ = OpExpr($2, $1, NeqOp, $3); }
-|   expr LT expr
+|   expr TK_LT expr
     { $$ = OpExpr($2, $1, LtOp, $3); }
-|   expr LE expr
+|   expr TK_LE expr
     { $$ = OpExpr($2, $1, LeOp, $3); }
-|   expr GT expr
+|   expr TK_GT expr
     { $$ = OpExpr($2, $1, GtOp, $3); }
-|   expr GE expr
+|   expr TK_GE expr
     { $$ = OpExpr($2, $1, GeOp, $3); }
 
-|   expr AND expr
+|   expr TK_AND expr
     { $$ = IfExpr($2, $1, $3, IntExpr($2, 0)); }
-|   expr OR expr
+|   expr TK_OR expr
     { $$ = IfExpr($2, $1, IntExpr($2, 1), $3); }
 
-|   id LBRACE RBRACE
+|   id TK_LBRACE TK_RBRACE
     { $$ = RecordExpr($2, $1, NULL); }
-|   id LBRACE id EQ expr efield_seq RBRACE
+|   id TK_LBRACE id TK_EQ expr efield_seq TK_RBRACE
     { $$ = RecordExpr($2, $1, DataList(EField($4, $3, $5), $6)); }
 
-|   id LBRACK expr RBRACK OF expr
+|   id TK_LBRACK expr TK_RBRACK TK_OF expr
     { $$ = ArrayExpr($2, $1, $3, $6); }
 
-|   lvalue ASSIGN expr
+|   lvalue TK_ASSIGN expr
     { $$ = AssignExpr($2, $1, $3); }
 
-|   IF expr THEN expr
+|   TK_IF expr TK_THEN expr
     { $$ = IfExpr($1, $2, $4, NULL); }
-|   IF expr THEN expr ELSE expr
+|   TK_IF expr TK_THEN expr TK_ELSE expr
     { $$ = IfExpr($1, $2, $4, $6); }
 
-|   WHILE expr DO expr
+|   TK_WHILE expr TK_DO expr
     { $$ = WhileExpr($1, $2, $4); }
-|   FOR id ASSIGN expr TO expr DO expr
+|   TK_FOR id TK_ASSIGN expr TK_TO expr TK_DO expr
     { $$ = ForExpr($1, $2, $4, $6, $8); }
-|   BREAK
+|   TK_BREAK
     { $$ = BreakExpr($1); }
 
-|   LET decls IN expr END
+|   TK_LET decls TK_IN expr TK_END
     { $$ = LetExpr($1, $2, $4); }
 
 decls:
@@ -193,29 +196,29 @@ decl:
     { $$ = FunctionDecl(((N_FunDecl) $1->data)->pos, $1); }
 
 types_decl:
-    TYPE id EQ type
+    TK_TYPE id TK_EQ type
     { $$ = DataList(NamedType($1, $2, $4), NULL); }
-|   types_decl TYPE id EQ type
+|   types_decl TK_TYPE id TK_EQ type
     { LIST_ACTION($$, $1, NamedType($2, $3, $5)); }
 
 type:
     id
     { $$ = NameType(EM_tokPos, $1); }
-|   LBRACE fields RBRACE
+|   TK_LBRACE fields TK_RBRACE
     { $$ = RecordType($1, $2); }
-|   ARRAY OF id
+|   TK_ARRAY TK_OF id
     { $$ = ArrayType($1, $3); }
 
 fields:
     /* empty */
     { $$ = NULL; }
-|   id COLON id field_seq
+|   id TK_COLON id field_seq
     { $$ = DataList(Field($2, $1, $3), $4); }
 
 var_decl:
-    VAR id ASSIGN expr
+    TK_VAR id TK_ASSIGN expr
     { $$ = VarDecl($1, $2, NULL, $4); }
-|   VAR id COLON id ASSIGN expr
+|   TK_VAR id TK_COLON id TK_ASSIGN expr
     { $$ = VarDecl($1, $2, $4, $6); }
 
 funcs_decl:
@@ -225,33 +228,33 @@ funcs_decl:
     { LIST_ACTION($$, $1, $2); }
 
 func_decl:
-    FUNCTION id LPAREN fields RPAREN EQ expr
+    TK_FUNCTION id TK_LPAREN fields TK_RPAREN TK_EQ expr
     { $$ = FunDecl($1, $2, $4, NULL, $7); }
-|   FUNCTION id LPAREN fields RPAREN COLON id EQ expr
+|   TK_FUNCTION id TK_LPAREN fields TK_RPAREN TK_COLON id TK_EQ expr
     { $$ = FunDecl($1, $2, $4, $7, $9); }
 
 expr_seq:
-    SEMICOLON expr
+    TK_SEMICOLON expr
     { $$ = DataList($2, NULL); }
-|   expr_seq SEMICOLON expr
+|   expr_seq TK_SEMICOLON expr
     { LIST_ACTION($$, $1, $3); }
 
 arg_seq:
     /* empty */
     { $$ = NULL; }
-|   arg_seq COMMA expr
+|   arg_seq TK_COMMA expr
     { LIST_ACTION($$, $1, $3); }
 
 efield_seq:
     /* empty */
     { $$ = NULL; }
-|   efield_seq COMMA id EQ expr
+|   efield_seq TK_COMMA id TK_EQ expr
     { LIST_ACTION($$, $1, EField($4, $3, $5)); }
 
 field_seq:
     /* empty */
     { $$ = NULL; }
-|   field_seq COMMA id COLON id
+|   field_seq TK_COMMA id TK_COLON id
     { LIST_ACTION($$, $1, Field($4, $3, $5)); }
 
 lvalue:
@@ -261,13 +264,15 @@ lvalue:
 lvalue_:
     /* empty */
     { $$ = NULL; }
-|   DOT id lvalue_
+|   TK_DOT id lvalue_
     { LVALUE_ACTION($$, $3, FieldVar($1, NULL, $2)); }
-|   LBRACK expr RBRACK lvalue_
+|   TK_LBRACK expr TK_RBRACK lvalue_
     { LVALUE_ACTION($$, $4, SubscriptVar($1, NULL, $2)); }
 
 id:
-    ID { $$ = GetSym($1); }
+    TK_ID
+    { $$ = GetSym($1); }
+
 %%
 
 void yyerror(char *msg) {
@@ -276,13 +281,15 @@ void yyerror(char *msg) {
 
 static void print_token_value(FILE *fp, int type, YYSTYPE value) {
     switch (type) {
-        case ID:
-        case STRING:
+        case TK_ID:
+        case TK_STRING:
             fprintf(fp, "%s", value.str);
             break;
-        case INT:
+        case TK_INT:
             fprintf(fp, "%d", value.num);
             break;
+        default:
+            fprintf(fp, "tok %d", type);
     }
 }
 

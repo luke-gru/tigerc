@@ -33,28 +33,28 @@ BUILD_FILE_PARSER_DEBUG=tigerc_parse
 
 # default
 .PHONY: lexer
-lexer: build lex.yy.o
+lexer: build lex.yy.o parse.tab.o
 	${CC} ${CFLAGS} $(COMMON_SRCS) nodes.c lex_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_LEXER_DEBUG}
 
 lex.yy.c: tiger.l
 	${LEX} tiger.l
 
 lex.yy.o: lex.yy.c tokens.h errormsg.h util.h
-	${CC} -O2 -g -c lex.yy.c
+	${CC} -O2 -g -c lex.yy.c -o lex.yy.o
 
-y.tab.c: parse.y
-	${YACC} -dv parse.y
+parse.tab.c: parse.y
+	${YACC} -dvt parse.y -o parse.tab.c
 
-y.tab.o: y.tab.c
-	${CC} -O2 -g -c y.tab.c
+parse.tab.o: parse.tab.c
+	${CC} -O2 -g -c parse.tab.c
 
 .PHONY: interpreter
 interpreter: build lex.yy.o
 	${CC} ${CFLAGS} $(COMMON_SRCS) nodes.c interpreter.c interpreter_driver.c lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_INTERPRETER_DEBUG}
 
 .PHONY: parser
-parser: build y.tab.o lex.yy.o
-	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c parser_driver.c y.tab.o lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_PARSER_DEBUG}
+parser: build parse.tab.o lex.yy.o
+	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c parser_driver.c parse.tab.o lex.yy.o ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_PARSER_DEBUG}
 
 .PHONY: build
 build:
@@ -64,8 +64,8 @@ build:
 clean:
 	rm -rf ${BUILD_DIR}
 	rm -f *.o
-	rm lex.yy.c
-	rm y.tab.c
-	rm y.tab.h
-	rm y.output
+	rm -f lex.yy.c
+	rm -f parse.tab.c
+	rm -f parse.tab.h
+	rm -f parse.output
 

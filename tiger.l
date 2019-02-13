@@ -1,13 +1,14 @@
 %{
 
-/*#define YY_NO_UNISTD_H*/
+#define YY_NO_UNISTD_H
 
 #include <ctype.h>
 #include <string.h>
 
 #include "util.h"
-#include "tokens.h"
 #include "errormsg.h"
+#include "ast.h"
+#include "parse.tab.h"
 
 static int _char_pos = 1;
 
@@ -32,14 +33,17 @@ static void append_char(char ch);
 
 %}
 
+%option nounput
+%option never-interactive
+
 %x X_COMMENT X_STRING
 
 %%
 
-[ \t\f\v\r]             { ADJ; }
-\n                      { ADJ; EM_newline(); }
+<INITIAL>[ \t\f\v\r]             { ADJ; }
+<INITIAL>\n                      { ADJ; EM_newline(); }
 
-"/*"                    { ADJ; _comment_level = 1; BEGIN(X_COMMENT); }
+<INITIAL>"/*"                    { ADJ; _comment_level = 1; BEGIN(X_COMMENT); }
 <X_COMMENT>[^*/\n]*       { ADJ; }
 <X_COMMENT>"*"+[^*/\n]*   { ADJ; }
 <X_COMMENT>"/"+[^*/\n]*   { ADJ; }
@@ -52,57 +56,54 @@ static void append_char(char ch);
         BEGIN(INITIAL);
 }
 
-","                     { ADJ; return COMMA; }
-":"                     { ADJ; return COLON; }
-";"                     { ADJ; return SEMICOLON; }
-"("                     { ADJ; return LPAREN; }
-")"                     { ADJ; return RPAREN; }
-"["                     { ADJ; return LBRACK; }
-"]"                     { ADJ; return RBRACK; }
-"{"                     { ADJ; return LBRACE; }
-"}"                     { ADJ; return RBRACE; }
-"."                     { ADJ; return DOT; }
-"+"                     { ADJ; return PLUS; }
-"-"                     { ADJ; return MINUS; }
-"*"                     { ADJ; return TIMES; }
-"/"                     { ADJ; return DIVIDE; }
-"="                     { ADJ; return EQ; }
-"<>"                    { ADJ; return NEQ; }
-"<"                     { ADJ; return LT; }
-"<="                    { ADJ; return LE; }
-">"                     { ADJ; return GT; }
-">="                    { ADJ; return GE; }
-"&"                     { ADJ; return AND; }
-"|"                     { ADJ; return OR; }
-":="                    { ADJ; return ASSIGN; }
-
-array                   { ADJ; return ARRAY; }
-if                      { ADJ; return IF; }
-then                    { ADJ; return THEN; }
-else                    { ADJ; return ELSE; }
-while                   { ADJ; return WHILE; }
-for                     { ADJ; return FOR; }
-to                      { ADJ; return TO; }
-do                      { ADJ; return DO; }
-let                     { ADJ; return LET; }
-in                      { ADJ; return IN; }
-end                     { ADJ; return END; }
-of                      { ADJ; return OF; }
-break                   { ADJ; return BREAK; }
-nil                     { ADJ; return NIL; }
-function                { ADJ; return FUNCTION; }
-var                     { ADJ; return VAR; }
-type                    { ADJ; return TYPE; }
-
-[0-9]+                  { ADJ; yylval.ival = atoi(yytext); return INT; }
-[_a-zA-Z][_a-zA-Z0-9]*  { ADJ; yylval.sval = String(yytext); return ID; }
-
-\"                      { ADJ; init_buf(); BEGIN(X_STRING); }
+<INITIAL>","                     { ADJ; return TK_COMMA; }
+<INITIAL>":"                     { ADJ; return TK_COLON; }
+<INITIAL>";"                     { ADJ; return TK_SEMICOLON; }
+<INITIAL>"("                     { ADJ; return TK_LPAREN; }
+<INITIAL>")"                     { ADJ; return TK_RPAREN; }
+<INITIAL>"["                     { ADJ; return TK_LBRACK; }
+<INITIAL>"]"                     { ADJ; return TK_RBRACK; }
+<INITIAL>"{"                     { ADJ; return TK_LBRACE; }
+<INITIAL>"}"                     { ADJ; return TK_RBRACE; }
+<INITIAL>"."                     { ADJ; return TK_DOT; }
+<INITIAL>"+"                     { ADJ; return TK_PLUS; }
+<INITIAL>"-"                     { ADJ; return TK_MINUS; }
+<INITIAL>"*"                     { ADJ; return TK_TIMES; }
+<INITIAL>"/"                     { ADJ; return TK_DIVIDE; }
+<INITIAL>"="                     { ADJ; return TK_EQ; }
+<INITIAL>"<>"                    { ADJ; return TK_NEQ; }
+<INITIAL>"<"                     { ADJ; return TK_LT; }
+<INITIAL>"<="                    { ADJ; return TK_LE; }
+<INITIAL>">"                     { ADJ; return TK_GT; }
+<INITIAL>">="                    { ADJ; return TK_GE; }
+<INITIAL>"&"                     { ADJ; return TK_AND; }
+<INITIAL>"|"                     { ADJ; return TK_OR; }
+<INITIAL>":="                    { ADJ; return TK_ASSIGN; }
+<INITIAL>array                   { ADJ; return TK_ARRAY; }
+<INITIAL>if                      { ADJ; return TK_IF; }
+<INITIAL>then                    { ADJ; return TK_THEN; }
+<INITIAL>else                    { ADJ; return TK_ELSE; }
+<INITIAL>while                   { ADJ; return TK_WHILE; }
+<INITIAL>for                     { ADJ; return TK_FOR; }
+<INITIAL>to                      { ADJ; return TK_TO; }
+<INITIAL>do                      { ADJ; return TK_DO; }
+<INITIAL>let                     { ADJ; return TK_LET; }
+<INITIAL>in                      { ADJ; return TK_IN; }
+<INITIAL>end                     { ADJ; return TK_END; }
+<INITIAL>of                      { ADJ; return TK_OF; }
+<INITIAL>break                   { ADJ; return TK_BREAK; }
+<INITIAL>nil                     { ADJ; return TK_NIL; }
+<INITIAL>function                { ADJ; return TK_FUNCTION; }
+<INITIAL>var                     { ADJ; return TK_VAR; }
+<INITIAL>type                    { ADJ; return TK_TYPE; }
+<INITIAL>[0-9]+                  { ADJ; yylval.num = atoi(yytext); return TK_INT; }
+<INITIAL>[_a-zA-Z][_a-zA-Z0-9]*  { ADJ; yylval.str = String(yytext); return TK_ID; }
+<INITIAL>\"                      { ADJ; init_buf(); BEGIN(X_STRING); }
 <X_STRING>\"              {
     ADJ;
     BEGIN(INITIAL);
-    yylval.sval = _str_buf;
-    return STRING;
+    yylval.str = _str_buf;
+    return TK_STRING;
 }
 <X_STRING>\n              { ADJ; EM_newline(); }
 <X_STRING>\\[0-9]{3}      {
@@ -127,13 +128,14 @@ type                    { ADJ; return TYPE; }
         append_char(*p++);
 }
 
-.                       { ADJ; EM_error(EM_tokPos, "illegal token"); }
+<INITIAL>.                       { ADJ; EM_error(EM_tokPos, "illegal token"); }
 
 %%
 
+// called at end of yyin's EOF
 int yywrap(void) {
     _char_pos = 1;
-    return 1;
+    return 1; // signal this is last file
 }
 
 static void init_buf(void) {
@@ -150,6 +152,7 @@ static void append_char(char ch) {
         _str_cap *= 2;
         p = checked_malloc(_str_cap);
         memcpy(p, _str_buf, _str_len);
+        assert(_str_buf);
         free(_str_buf);
         _str_buf = p;
     }

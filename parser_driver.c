@@ -6,8 +6,10 @@
 #include "parse.h"
 
 extern int yyparse(void);
+extern int yydebug;
 
 int main(int argc, char **argv) {
+    /*yydebug = 1;*/
     if (argc!=2) {
         fprintf(stderr,"usage: a.out filename\n");
         exit(1);

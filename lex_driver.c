@@ -9,19 +9,6 @@ YYSTYPE yylval;
 
 int yylex(void); /* prototype for the lexing function */
 
-string toknames[] = {
-    "ID", "STRING", "INT", "COMMA", "COLON", "SEMICOLON", "LPAREN",
-    "RPAREN", "LBRACK", "RBRACK", "LBRACE", "RBRACE", "DOT", "PLUS",
-    "MINUS", "TIMES", "DIVIDE", "EQ", "NEQ", "LT", "LE", "GT", "GE",
-    "AND", "OR", "ASSIGN", "ARRAY", "IF", "THEN", "ELSE", "WHILE", "FOR",
-    "TO", "DO", "LET", "IN", "END", "OF", "BREAK", "NIL", "FUNCTION",
-    "VAR", "TYPE"
-};
-
-static string tokname(int tok) {
-  return tok<257 || tok>299 ? "BAD_TOKEN" : toknames[tok-257];
-}
-
 int main(int argc, char **argv) {
     string fname; int tok;
     if (argc!=2) {
@@ -38,11 +25,11 @@ int main(int argc, char **argv) {
         tok=yylex();
         if (tok==0) break;
         switch(tok) {
-            case ID: case STRING:
-                printf("%10s %4d %s\n",tokname(tok),EM_tokPos,yylval.sval);
+            case TK_ID: case TK_STRING:
+                printf("%10s %4d %s\n",tokname(tok),EM_tokPos,yylval.str);
                 break;
-            case INT:
-                printf("%10s %4d %d\n",tokname(tok),EM_tokPos,yylval.ival);
+            case TK_INT:
+                printf("%10s %4d %d\n",tokname(tok),EM_tokPos,yylval.num);
                 break;
             default:
                 printf("%10s %4d\n",tokname(tok),EM_tokPos);
