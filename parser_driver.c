@@ -4,6 +4,7 @@
 #include "util.h"
 #include "errormsg.h"
 #include "parse.h"
+#include "print_ast.h"
 
 extern int yyparse(void);
 extern int yydebug;
@@ -16,7 +17,8 @@ int main(int argc, char **argv) {
     }
     N_Expr expr = parse(argv[1]);
     if (expr) {
-        fprintf(stdout, "Parsing succeeded\n");
+        pr_exp(stderr, expr, -1);
+        fprintf(stdout, "\nParsing succeeded\n");
     } else {
         fprintf(stderr, "Parsing failed\n");
     }
