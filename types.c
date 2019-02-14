@@ -92,3 +92,30 @@ void TyList_print(List tyList) {
       printf(")");
   }
 }
+
+Ty Ty_Actual(Ty t) {
+    assert(t);
+    Ty origin = t;
+    int counter = 0; // for recursive type definitions, which are illegal
+
+    while (t->kind == tTyName) {
+        t = t->as.name.ty;
+        if (++counter > 4096) {
+            return origin;
+        }
+    }
+    return t;
+}
+
+bool Ty_Match(Ty t1, Ty t2) {
+    t1 = Ty_Actual(t1);
+    t2 = Ty_Actual(t2);
+    if (t1 == t2) {
+        return true;
+    } else if (t1->kind == tTyRecord && t2->kind == tTyNil) {
+        return true;
+    } else if (t2->kind == tTyRecord && t1->kind == tTyNil) {
+        return true;
+    }
+    return false;
+}

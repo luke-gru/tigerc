@@ -64,7 +64,7 @@ struct sExpr {
            /* breakk; - need only the pos */
            struct {List/*<N_Decl>*/ decls; N_Expr body;} let;
            struct {Symbol ty; N_Expr size, init;} array;
-	    } as;
+       } as;
 };
 
 struct sDecl {

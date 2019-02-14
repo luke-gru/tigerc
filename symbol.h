@@ -23,9 +23,10 @@ Symbol GetSym(string);
 /* Extract the underlying string from a symbol */
 string SymName(Symbol);
 
-/* SymTable is a mapping from Symbol->any, where "any" is represented
+/** SymTable is a mapping from Symbol->any, where "any" is represented
  * here by `void*`. `void*` holds either type information, or value (function, variable)
- *  info */
+ * info
+ */
 typedef struct sTable *SymTable;
 
 /* Make a new table */
@@ -39,7 +40,7 @@ void SymTableEnter(SymTable st, Symbol sym, void *value);
  *    if sym is unbound. */
 void *SymTableLookup(SymTable st, Symbol sym);
 
-/* Start a new "scope" in "t".  Scopes are nested. */
+/* Start a new "scope" in "st".  Scopes are nested. */
 void SymTableBeginScope(SymTable st);
 
 /* Remove any bindings entered since the current scope began,

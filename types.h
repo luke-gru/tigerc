@@ -42,4 +42,8 @@ TyField Ty_Field(Symbol name, Ty ty);
 void Ty_print(Ty t);
 void TyList_print(List tyList);
 
+bool Ty_Match(Ty t1, Ty t2);
+// If named type, attemps to retrieve actual type. If none found, returns NULL.
+Ty Ty_Actual(Ty t);
+
 #endif
