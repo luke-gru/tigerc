@@ -20,9 +20,9 @@ struct sTy {
     } kind;
 
     union {
-        List fields;
+        List/*<TyField>*/ fields; // tTyRecord
         Ty array;
-        struct {Symbol sym; Ty ty;} name;
+        struct {Symbol sym; Ty ty;} name; // name type, for arrays/records
     } as;
 };
 
@@ -36,8 +36,9 @@ Ty Ty_Void(void);
 Ty Ty_Record(List fields);
 Ty Ty_Array(Ty ty);
 Ty Ty_Name(Symbol sym, Ty ty);
-
 TyField Ty_Field(Symbol name, Ty ty);
+
+string Ty_GetName(Ty ty);
 
 void Ty_print(Ty t);
 void TyList_print(List tyList);

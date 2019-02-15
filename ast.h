@@ -25,7 +25,7 @@ typedef struct sNameType  *N_NameType;
 typedef struct sEField    *N_EField;
 
 typedef enum {PlusOp, MinusOp, TimesOp, DivideOp,
-	     EqOp, NeqOp, LtOp, LeOp, GtOp, GeOp} Op;
+    EqOp, NeqOp, LtOp, LeOp, GtOp, GeOp} Op;
 
 struct sVar {
     enum {tSimpleVar, tFieldVar, tSubscriptVar} kind;
@@ -82,9 +82,9 @@ struct sType {
     enum { tNameTy, tRecordTy, tArrayTy } kind;
     Pos pos;
     union {
-        Symbol name;
+        Symbol name; // named type
         List/*<N_Field>*/ record;
-        Symbol array;
+        Symbol array; // array type
     } as;
 };
 

@@ -44,6 +44,10 @@ string SymName(Symbol sym) {
     return sym->name;
 }
 
+bool SymEq(Symbol s1, Symbol s2) {
+    return strcmp(SymName(s1), SymName(s2)) == 0;
+}
+
 SymTable MakeSymTable(void) {
     return MakeTable();
 }

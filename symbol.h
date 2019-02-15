@@ -23,6 +23,8 @@ Symbol GetSym(string);
 /* Extract the underlying string from a symbol */
 string SymName(Symbol);
 
+bool SymEq(Symbol s1, Symbol s2);
+
 /** SymTable is a mapping from Symbol->any, where "any" is represented
  * here by `void*`. `void*` holds either type information, or value (function, variable)
  * info

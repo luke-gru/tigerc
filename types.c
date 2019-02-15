@@ -119,3 +119,26 @@ bool Ty_Match(Ty t1, Ty t2) {
     }
     return false;
 }
+
+string Ty_GetName(Ty t) {
+    switch (t->kind) {
+        case tTyNil:
+            return "nil";
+        case tTyInt:
+            return "int";
+        case tTyString:
+            return "string";
+        case tTyVoid:
+            return "void";
+        case tTyName:
+                return SymName(t->as.name.sym);
+        case tTyArray:
+                // TODO: prefix with "array of "
+                return Ty_GetName(t->as.array);
+        case tTyRecord:
+                assert(0);
+        default:
+            assert(0);
+    }
+    return 0;
+}
