@@ -20,7 +20,9 @@ int main(int argc, char **argv) {
     if (expr) {
         pr_exp(stderr, expr, -1);
         fprintf(stdout, "\nParsing succeeded\n");
-        if (TypeCheck(expr) == 0) {
+        ExprTy tyCheckRes = TypeCheck(expr);
+        (void)tyCheckRes;
+        if (EM_errors == 0) {
             fprintf(stdout, "Type check succeeded\n");
         } else {
             fprintf(stderr, "Type check failed\n");

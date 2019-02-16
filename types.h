@@ -33,8 +33,8 @@ Ty Ty_Int(void);
 Ty Ty_String(void);
 Ty Ty_Void(void);
 
-Ty Ty_Record(List fields);
-Ty Ty_Array(Ty ty);
+Ty Ty_Record(List tyFields);
+Ty Ty_Array(Ty elType);
 Ty Ty_Name(Symbol sym, Ty ty);
 TyField Ty_Field(Symbol name, Ty ty);
 

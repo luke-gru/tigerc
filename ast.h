@@ -22,7 +22,7 @@ typedef struct sType *N_Type;
 typedef struct sField     *N_Field;
 typedef struct sFunDecl   *N_FunDecl;
 typedef struct sNameType  *N_NameType;
-typedef struct sEField    *N_EField;
+typedef struct sEField    *N_EField; // field expression
 
 typedef enum {PlusOp, MinusOp, TimesOp, DivideOp,
     EqOp, NeqOp, LtOp, LeOp, GtOp, GeOp} Op;
@@ -55,7 +55,7 @@ struct sExpr {
            string stringVal;
            struct {Symbol func; List/*<N_Expr>*/ args;} call;
            struct {Op op; N_Expr left; N_Expr right;} op;
-           struct {Symbol ty; List fields;} record;
+           struct {Symbol ty; List/*N_EField*/ efields;} record;
            List/*<N_Expr>*/ seq;
            struct {N_Var var; N_Expr expr;} assign;
            struct {N_Expr test, then, elsee;} iff; /* elsee is optional */
@@ -90,11 +90,19 @@ struct sType {
 
 /* Linked lists and nodes of lists */
 
-struct sField { Symbol name, ty; Pos pos; bool escape; };
+struct sField {
+    Symbol name;
+    Symbol ty;
+    Pos pos;
+    bool escape;
+};
 
 struct sFunDecl {
-    Pos pos; Symbol name; List/*<N_Field>*/ params;
-    Symbol result; N_Expr body;
+    Pos pos;
+    Symbol name;
+    List/*<N_Field>*/ params;
+    Symbol result;
+    N_Expr body;
 };
 
 struct sNameType { Pos pos; Symbol name; N_Type ty; };

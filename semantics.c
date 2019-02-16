@@ -5,26 +5,22 @@
 #include "semantics.h"
 #include "types.h"
 #include "env.h"
+#include "errormsg.h"
 
 #define CHECK_DEBUG(msg, ...) CheckDebug(msg, ##__VA_ARGS__)
 
 static SymTable tEnv = NULL; // type sym table
 static SymTable vEnv = NULL; // value sym table
 
-static void CheckError(Pos pos, const char *msg, ...) {
-    va_list ap;
-    va_start(ap, msg);
-    vfprintf(stderr, msg, ap);
-    fprintf(stderr, "\n");
-    va_end(ap);
-}
+#define CheckError(pos, msg, ...) EM_error(pos, msg, ##__VA_ARGS__)
 
-static void MismatchTypeError(Pos pos, Ty expected, Ty got) {
-    assert(!Ty_Match(expected, got));
-    string expectedName = Ty_GetName(expected);
-    string gotName = Ty_GetName(got);
-    CheckError(pos, "Expected type %s, got %s", expectedName, gotName);
-}
+/*static void CheckError(Pos pos, const char *msg, ...) {*/
+    /*va_list ap;*/
+    /*va_start(ap, msg);*/
+    /*vfprintf(stderr, msg, ap);*/
+    /*fprintf(stderr, "\n");*/
+    /*va_end(ap);*/
+/*}*/
 
 static void CheckDebug(const char *msg, ...) {
     va_list ap;
@@ -34,93 +30,98 @@ static void CheckDebug(const char *msg, ...) {
     va_end(ap);
 }
 
-static int CheckExpr(N_Expr expr);
-
-static int CheckFunDecl(N_Decl decl) {
-    return 0;
+static ExprTy VoidExprTy(void) {
+    return ExprType(NULL, Ty_Void());
 }
 
-static int CheckExprType(N_Expr expr, Ty ty, Symbol tyName) {
-    Ty tyFound;
-    string tyFoundName;
-    switch (expr->kind) {
-        case tVarExpr:
-        case tCallExpr:
-        case tRecordExpr:
-        case tSeqExpr:
-            return 0; // TODO
-        case tNilExpr:
-            tyFound = Ty_Nil();
-            tyFoundName = "nil";
-            break;
-        case tIntExpr:
-        case tOpExpr:
-            tyFound = Ty_Int();
-            tyFoundName = "nil";
-            break;
-        case tStringExpr:
-            tyFound = Ty_String();
-            tyFoundName = "string";
-            break;
-        case tArrayExpr: {
-            Symbol arrayTySym = expr->as.array.ty;
-            Ty arrayTy = (Ty)SymTableLookup(tEnv, arrayTySym);
-            if (!arrayTy) {
-                CheckError(expr->pos, "Type '%s' not found", SymName(arrayTySym));
-                return -1;
-            }
-            if (arrayTy->kind != tTyArray) {
-                CheckError(expr->pos, "Expected array type, got type %s", Ty_GetName(arrayTy));
-                return -1;
-            }
-            N_Expr arraySzExpr = expr->as.array.size;
+static ExprTy CheckExpr(N_Expr expr);
+static ExprTy CheckVarExpr(N_Expr expr);
+static ExprTy CheckVar(N_Var var);
 
-            // check size
-            assert(arraySzExpr);
-            int szRes = CheckExprType(arraySzExpr, Ty_Int(), GetSym("int"));
-            if (szRes != 0) return szRes;
-
-            // check init
-            N_Expr arrayInitExpr = expr->as.array.init;
-            assert(arrayInitExpr);
-            int initRes = CheckExprType(arrayInitExpr, arrayTy->as.array, GetSym("int"));
-            if (initRes != 0) return initRes;
-
-            tyFound = arrayTy;
-            tyFoundName = SymName(arrayTySym);
-            break;
-        }
-        default:
-            fprintf(stderr, "found expr of kind: %d\n", expr->kind);
-            assert(0);
+static Ty LookupType(Symbol tyName, Pos pos) {
+    Ty tyFound = SymTableLookup(tEnv, tyName);
+    if (!tyFound) {
+        CheckError(pos, "Undefined type '%s'", SymName(tyName));
+        return NULL;
+    } else {
+        return Ty_Actual(tyFound);
     }
-    if (!Ty_Match(tyFound, ty)) {
-        CheckError(expr->pos, "Type '%s' found, expected type '%s'", tyFoundName, SymName(tyName));
-        return -1;
-    }
-    return 0;
 }
 
-// TODO: check usage of types matches initializer, if given
-static int CheckVarDecl(N_Decl decl) {
+static ExprTy CheckVarDecl(N_Decl decl) {
     CHECK_DEBUG("checking varDecl");
+    ExprTy initRes = CheckExpr(decl->as.var.init);
+    Ty initTy = initRes.ty;
+
     Symbol varName = decl->as.var.var;
     Symbol tyName = decl->as.var.ty;
-    if (SymTableLookup(tEnv, varName) != NULL) {
-        CheckError(decl->pos, "Variable %s already declared", SymName(varName));
-        return -1;
-    }
-    Ty tyFound = (Ty)SymTableLookup(tEnv, tyName);
+
+    assert(tyName);
+
+    Ty tyFound = LookupType(tyName, decl->pos);
     if (!tyFound) {
-        CheckError(decl->pos, "Type '%s' not found", SymName(tyName));
-        return -1;
+        tyFound = Ty_Int(); // error handling case
     }
-    SymTableEnter(tEnv, varName, tyFound);
-    if (decl->as.var.init) {
-        int res = CheckExprType(decl->as.var.init, tyFound, tyName);
-        if (res != 0) return res;
+    if (!Ty_Match(tyFound, initTy)) {
+        CheckError(decl->pos, "initializer has incorrect type");
     }
-    return 0;
+    SymTableEnter(vEnv, varName, E_VarEntry(tyFound));
+    return ExprType(NULL, tyFound);
+}
+
+static Ty CheckArrayType(N_Type ty) {
+    Ty t = SymTableLookup(tEnv, ty->as.array);
+    if (!t) {
+        CheckError(ty->pos, "Undefined type '%s'", SymName(ty->as.array));
+        t = Ty_Int();
+    }
+    return Ty_Array(t);
+}
+
+static Ty CheckNType(N_Type ty) {
+    Ty t = SymTableLookup(tEnv, ty->as.name);
+    if (!t) {
+        CheckError(ty->pos, "undefined type '%s'", SymName(ty->as.name));
+        t = Ty_Int();
+    }
+    return t;
+}
+
+static Ty CheckRecordType(N_Type ty) {
+    List q = NULL, r = NULL;
+
+    List p;
+    for (p = ty->as.record; p; p = p->next) {
+        N_Field field = p->data;
+        Ty t = SymTableLookup(tEnv, field->ty);
+
+        if (!t) {
+            CheckError(ty->pos, "Undefined type '%s'", SymName(field->ty));
+            t = Ty_Int();
+        }
+
+        if (r) {
+            r->next = DataList(Ty_Field(field->name, t), NULL);
+            r = r->next;
+        } else {
+            q = r = DataList(Ty_Field(field->name, t), NULL);
+        }
+    }
+
+    return Ty_Record(q);
+}
+
+static Ty CheckType(N_Type ty) {
+    switch (ty->kind) {
+    case tNameTy:
+        return CheckNType(ty);
+    case tRecordTy:
+        return CheckRecordType(ty);
+    case tArrayTy:
+        return CheckArrayType(ty);
+    default:
+        assert(0);
+    }
 }
 
 static int CheckNameType(N_NameType nType) {
@@ -129,7 +130,7 @@ static int CheckNameType(N_NameType nType) {
         return -1;
     }
     CHECK_DEBUG("Entering type '%s'", SymName(nType->name));
-    SymTableEnter(tEnv, nType->name, nType->ty);
+    SymTableEnter(tEnv, nType->name, CheckType(nType->ty));
     return 0;
 }
 
@@ -144,14 +145,51 @@ static int CheckTypesDecl(N_Decl decl) {
     return CheckTypesList(typesList);
 }
 
-static int CheckDecl(N_Decl decl) {
+static List FormalTypeList(List params, Pos pos) {
+    List q = NULL, r = NULL;
+    while (params) {
+        N_Field field = (N_Field)params->data;
+        Ty t = LookupType(field->ty, pos);
+        if (!t) {
+            t = Ty_Int(); // error case, reported already
+        }
+        if (q) {
+            r->next = DataList(t, NULL);
+            r = r->next;
+        } else {
+            q = DataList(t, NULL);
+            r = q;
+        }
+        params = params->next;
+    }
+    return q;
+}
+
+static void CheckFunDecls(N_Decl decl) {
+    List funcs = decl->as.functions;
+    while (funcs) {
+        N_FunDecl funcDecl = (N_FunDecl)funcs->data;
+        List formals = FormalTypeList(funcDecl->params, funcDecl->pos);
+        Ty resultTy = Ty_Void();
+        if (funcDecl->result) {
+            resultTy = LookupType(funcDecl->result, funcDecl->pos);
+        }
+        EnvEntry funcEntry = E_FunEntry(formals, resultTy);
+        SymTableEnter(vEnv, funcDecl->name, funcEntry);
+        funcs = funcs->next;
+    }
+}
+
+static ExprTy CheckDecl(N_Decl decl) {
     switch (decl->kind) {
         case tFunctionDecl:
-            return CheckFunDecl(decl);
+            CheckFunDecls(decl);
+            return VoidExprTy();
         case tVarDecl:
             return CheckVarDecl(decl);
         case tTypesDecl:
-            return CheckTypesDecl(decl);
+            CheckTypesDecl(decl);
+            return VoidExprTy();
         default:
             assert(0);
     }
@@ -160,8 +198,7 @@ static int CheckDecl(N_Decl decl) {
 static int CheckDecls(List decls) {
     if (decls == NULL) return 0;
     N_Decl decl = (N_Decl)decls->data;
-    int res = CheckDecl(decl);
-    if (res != 0) return res;
+    CheckDecl(decl);
     return CheckDecls(decls->next);
 }
 
@@ -169,169 +206,272 @@ static int CheckDecls(List decls) {
 //   decls
 // IN
 //   expr
-static int CheckLetExpr(N_Expr expr) {
+static ExprTy CheckLetExpr(N_Expr expr) {
     SymTableBeginScope(vEnv);
-    int declRes = CheckDecls(expr->as.let.decls);
-    int res = CheckExpr(expr->as.let.body);
+    CheckDecls(expr->as.let.decls);
+    ExprTy res = CheckExpr(expr->as.let.body);
     SymTableEndScope(vEnv);
-    return res == 0 && declRes == 0;
+    return res;
 }
 
-static int CheckSimpleVar(N_Var var) {
-    if (!SymTableLookup(vEnv, var->as.simple)) {
+static ExprTy CheckSimpleVar(N_Var var) {
+    EnvEntry varEntry = (EnvEntry)SymTableLookup(vEnv, var->as.simple);
+    if (!varEntry) {
         CheckError(var->pos, "Variable '%s' not declared", SymName(var->as.simple));
-        return -1;
+        return ExprType(NULL, Ty_Int());
+    } else if (varEntry->kind != tVarEntry) {
+        CheckError(var->pos, "Expected '%s' to be a variable, not a function", SymName(var->as.simple));
+        return ExprType(NULL, Ty_Int());
     }
-    return 0;
+    return ExprType(NULL, Ty_Actual(varEntry->as.var.ty));
 }
 
-static int CheckFieldVar(N_Var var) {
-    return 0;
+static ExprTy CheckFieldVar(N_Var var) {
+    ExprTy recordVar = CheckVar(var->as.field.var);
+    Ty recordTy = recordVar.ty;
+
+    if (recordTy->kind != tTyRecord) {
+        CheckError(var->pos, "Expected record type variable");
+        return ExprType(NULL, Ty_Int());
+    }
+
+    List fields = recordTy->as.fields;
+    while (fields) {
+        TyField tfield = (TyField)fields->data;
+        if (SymEq(tfield->name, var->as.field.sym)) {
+            return ExprType(NULL, Ty_Actual(tfield->ty));
+        }
+        fields = fields->next;
+    }
+
+    CheckError(var->pos, "There is no field named '%s'", SymName(var->as.field.sym));
+    return ExprType(NULL, Ty_Int());
 }
 
-static int CheckSubscriptVar(N_Var var) {
-    return 0;
+static ExprTy CheckSubscriptVar(N_Var var) {
+    return ExprType(NULL, Ty_Int()); // TODO
 }
 
-static int CheckVarExpr(N_Expr expr) {
-    switch (expr->as.var->kind) {
+static ExprTy CheckVar(N_Var var) {
+    switch (var->kind) {
         case tSimpleVar:
-            return CheckSimpleVar(expr->as.var);
+            return CheckSimpleVar(var);
         case tFieldVar:
-            return CheckFieldVar(expr->as.var);
+            return CheckFieldVar(var);
         case tSubscriptVar:
-            return CheckSubscriptVar(expr->as.var);
+            return CheckSubscriptVar(var);
         default:
             assert(0);
     }
 }
 
-static int CheckSeqExprList(List exprList) {
-    if (exprList == NULL) return 0;
-    int res = CheckExpr((N_Expr)exprList->data);
-    if (res != 0) return res;
-    return CheckSeqExprList(exprList->next);
+static ExprTy CheckVarExpr(N_Expr expr) {
+    return CheckVar(expr->as.var);
 }
 
-static int CheckSeqExpr(N_Expr expr) {
-    return CheckSeqExprList(expr->as.seq);
-}
-
-static Ty FindFieldType(Ty recordType, Symbol fieldName) {
-    assert(recordType->kind == tTyRecord);
-    List fields = recordType->as.fields;
-    while (fields) {
-        TyField f = (TyField)fields->data;
-        if (SymEq(f->name, fieldName)) {
-            return f->ty;
-        }
-        fields = fields->next;
+static ExprTy CheckSeqExpr(N_Expr expr) {
+    List exprList = expr->as.seq;
+    ExprTy ret = VoidExprTy();
+    while (exprList) {
+        ret = CheckExpr((N_Expr)exprList->data);
+        exprList = exprList->next;
     }
-    return NULL;
+    return ret;
 }
 
-static Ty FindVarType(N_Var var) {
-    switch (var->kind) {
-        case tSimpleVar: {
-            Symbol varName = var->as.simple;
-            return SymTableLookup(tEnv, varName);
-        }
-        case tFieldVar: {
-            Ty recordTy = FindVarType(var->as.field.var);
-            if (!recordTy) return NULL;
-            assert(recordTy->kind == tTyRecord);
-            Ty fieldType = FindFieldType(recordTy, var->as.field.sym);
-            if (!fieldType) {
-                CheckError(var->pos, "Record doesn't have field '%s'", SymName(var->as.field.sym));
-                return NULL;
-            }
-            return fieldType;
-        }
-        case tSubscriptVar:
-            assert(0);
+static ExprTy CheckAssignExpr(N_Expr expr) {
+    N_Var var = expr->as.assign.var;
+    N_Expr aexpr = expr->as.assign.expr;
+    ExprTy varRes = CheckVar(var);
+    ExprTy exprRes = CheckExpr(aexpr);
+
+    if (!Ty_Match(varRes.ty, exprRes.ty)) {
+        CheckError(expr->pos, "Type mismatch");
     }
-    return NULL;
+    return ExprType(NULL, Ty_Void());
 }
 
-static Ty FindOpExprType(N_Expr expr) {
-    switch (expr->as.op.op) {
+static ExprTy CheckNilExpr(N_Expr expr) {
+    return ExprType(NULL, Ty_Nil());
+}
+
+static ExprTy CheckIntExpr(N_Expr expr) {
+    return ExprType(NULL, Ty_Int());
+}
+
+static ExprTy CheckStringExpr(N_Expr expr) {
+    return ExprType(NULL, Ty_String());
+}
+
+static ExprTy CheckCallExpr(N_Expr expr) {
+    Symbol funcName = expr->as.call.func;
+    List argExprs = expr->as.call.args;
+    EnvEntry funcEntry = SymTableLookup(vEnv, funcName);
+    int nArg = 0;
+    if (!funcEntry) {
+        CheckError(expr->pos, "Function '%s' not declared", SymName(funcName));
+        return VoidExprTy();
+    }
+    if (funcEntry->kind == tVarEntry) {
+        CheckError(expr->pos, "Expected function, found variable ('%s')", SymName(funcName));
+        return VoidExprTy();
+    }
+    List formalTys = funcEntry->as.fun.formals;
+    Ty formalResTy = funcEntry->as.fun.result;
+
+    while (argExprs && formalTys) {
+        nArg++;
+        N_Expr argExpr = (N_Expr)argExprs->data;
+        ExprTy argRes = CheckExpr(argExpr);
+        Ty formalTy = formalTys->data;
+        if (!Ty_Match(formalTy, argRes.ty)) {
+            CheckError(argExpr->pos, "Argument type mismatch for argument %d in function '%s'",
+                    nArg, SymName(funcName));
+        }
+
+        argExprs = argExprs->next;
+        formalTys = formalTys->next;
+    }
+
+    if (formalTys) {
+        CheckError(expr->pos, "Expect more arguments");
+    } else if (argExprs) {
+        CheckError(expr->pos, "Expect less arguments");
+    }
+
+    return ExprType(NULL, formalResTy);
+}
+
+static ExprTy CheckOpExpr(N_Expr expr) {
+    Op op = expr->as.op.op;
+    ExprTy left = CheckExpr(expr->as.op.left);
+    ExprTy right = CheckExpr(expr->as.op.right); // FIXME: uminus?
+
+    switch (op) {
         case PlusOp:
         case MinusOp:
         case TimesOp:
         case DivideOp:
-            return Ty_Int();
+            if (left.ty->kind != tTyInt) {
+                CheckError(expr->as.op.left->pos, "int required");
+            }
+            if (right.ty->kind != tTyInt) {
+                CheckError(expr->as.op.right->pos, "int required");
+            }
+            return ExprType(NULL, Ty_Int());
         case EqOp:
         case NeqOp:
+            if (!Ty_Match(left.ty, right.ty)) {
+                CheckError(expr->pos, "the type of two operands must be the same");
+            }
+            return ExprType(NULL, Ty_Int());
         case LtOp:
         case LeOp:
         case GtOp:
         case GeOp:
-            return Ty_Int(); // int as bool
-        default:
-            assert(0);
+            if (!Ty_Match(left.ty, right.ty)) {
+                CheckError(expr->pos, "the type of two operands must be the same");
+            }
+
+            if (left.ty->kind != tTyInt && left.ty->kind != tTyString) {
+                CheckError(expr->pos, "the type of comparison's operand must be int or string");
+            }
+            return ExprType(NULL, left.ty);
     }
+    assert(0);
 }
 
-static Ty FindExprType(N_Expr expr) {
+static ExprTy CheckArrayExpr(N_Expr expr) {
+    Ty arrayTy = LookupType(expr->as.array.ty, expr->pos);
+    ExprTy sizeRes = CheckExpr(expr->as.array.size);
+    ExprTy initRes = CheckExpr(expr->as.array.init);
+
+    if (!arrayTy) {
+        return VoidExprTy();
+    }
+    if (arrayTy->kind != tTyArray) {
+        CheckError(expr->pos, "'%s' is not an array type", SymName(expr->as.array.ty));
+    }
+
+    if (sizeRes.ty->kind != tTyInt) {
+        CheckError(expr->pos, "array size must be of type int");
+    }
+
+    if (!Ty_Match(arrayTy->as.array, initRes.ty)) {
+        CheckError(expr->pos, "array initializer has incorrect type");
+    }
+    return ExprType(NULL, arrayTy);
+}
+
+static ExprTy CheckRecordExpr(N_Expr expr) {
+    Ty recTy = LookupType(expr->as.record.ty, expr->pos);
+    List p, q;
+    int size = 0;
+
+    if (!recTy) {
+        return ExprType(NULL, Ty_Nil());
+    }
+    if (recTy->kind != tTyRecord) {
+        CheckError(expr->pos, "'%s' is not a record type",
+            SymName(expr->as.record.ty));
+    }
+
+    for (p = recTy->as.fields, q = expr->as.record.efields;
+        p && q;
+        p = p->next, q= q->next, size++) {
+
+        N_EField efield = q->data;
+        ExprTy eFieldRes = CheckExpr(efield->expr);
+        TyField tyField = (TyField)p->data;
+        if (!Ty_Match(tyField->ty, eFieldRes.ty)) {
+            CheckError(efield->pos, "wrong field type");
+        }
+    }
+
+    if (p || q) {
+        CheckError(expr->pos, "wrong field number");
+    }
+    return ExprType(NULL, recTy);
+}
+
+static ExprTy CheckExpr(N_Expr expr) {
     switch (expr->kind) {
-        case tStringExpr:
-            return Ty_String();
-        case tIntExpr:
-            return Ty_Int();
-        case tNilExpr:
-            return Ty_Nil();
-        case tOpExpr:
-            return FindOpExprType(expr);
-        default:
-            assert(0);
-    }
-    return NULL;
-}
-
-static int CheckFieldVarMatches(N_Var var, N_Expr expr) {
-    Ty varType = FindVarType(var);
-    if (!varType) return -1;
-    Ty exprType = FindExprType(expr);
-    if (!Ty_Match(varType, exprType)) {
-        MismatchTypeError(var->pos, varType, exprType);
-        return -1;
-    }
-    return 0;
-}
-
-static int CheckAssignExpr(N_Expr expr) {
-    N_Var var = expr->as.assign.var;
-    switch (var->kind) {
-        case tSimpleVar:
-            break;
-        case tFieldVar:
-            return CheckFieldVarMatches(var, expr->as.assign.expr);
-        case tSubscriptVar:
-            break;
-        default:
-            assert(0);
-    }
-    return 0;
-}
-
-static int CheckExpr(N_Expr expr) {
-    switch (expr->kind) {
-        case tLetExpr:
-            return CheckLetExpr(expr);
         case tVarExpr:
             return CheckVarExpr(expr);
+        case tNilExpr:
+            return CheckNilExpr(expr);
+        case tIntExpr:
+            return CheckIntExpr(expr);
+        case tStringExpr:
+            return CheckStringExpr(expr);
+        case tCallExpr:
+            return CheckCallExpr(expr);
+        case tOpExpr:
+            return CheckOpExpr(expr);
+        case tRecordExpr:
+            return CheckRecordExpr(expr);
+        case tLetExpr:
+            return CheckLetExpr(expr);
         case tSeqExpr:
             return CheckSeqExpr(expr);
         case tAssignExpr:
             return CheckAssignExpr(expr);
+        case tArrayExpr:
+            return CheckArrayExpr(expr);
         default:
             fprintf(stderr, "Unhandled type check for expr kind: %d\n", expr->kind);
             assert(0);
-            return -1;
     }
 }
 
-int TypeCheck(N_Expr program) {
+struct sExprTy ExprType(Tr_Expr trExpr, Ty ty) {
+    struct sExprTy e;
+    e.trExpr = trExpr;
+    e.ty = ty;
+    return e;
+}
+
+ExprTy TypeCheck(N_Expr program) {
     tEnv = E_Base_tEnv();
     vEnv = E_Base_vEnv();
     return CheckExpr(program);

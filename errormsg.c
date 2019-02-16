@@ -13,7 +13,9 @@
 bool anyErrors = false;
 static string fileName = (string)"";
 static int lineNum = 1;
+
 int EM_tokPos = 0;
+int EM_errors = 0;
 
 extern FILE *yyin;
 
@@ -24,7 +26,7 @@ void EM_newline(void) {
     linePos = IntList(EM_tokPos, linePos);
 }
 
-void EM_error(int pos, char *message,...) {
+void EM_error(int pos, char *message, ...) {
     va_list ap;
     List lines = linePos;
     int num = lineNum;
@@ -41,11 +43,12 @@ void EM_error(int pos, char *message,...) {
     vfprintf(stderr, message, ap);
     va_end(ap);
     fprintf(stderr,"\n");
-
+    EM_errors++;
 }
 
 void EM_reset(string fname) {
     anyErrors = false;
+    EM_errors = 0;
     fileName = fname;
     lineNum = 1;
     linePos = IntList(0, NULL);
@@ -58,6 +61,7 @@ void EM_reset(string fname) {
 
 void EM_fset(FILE *f, string fname) {
     anyErrors = false;
+    EM_errors = 0;
     fileName = fname;
     lineNum = 1;
     linePos = IntList(0, NULL);

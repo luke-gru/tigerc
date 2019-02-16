@@ -93,7 +93,7 @@ void pr_exp(FILE *out, N_Expr v, int d) {
             break;
         case tRecordExpr:
             fprintf(out, "recordExp(%s,\n", SymName(v->as.record.ty));
-            pr_efieldList(out, v->as.record.fields, d+1);
+            pr_efieldList(out, v->as.record.efields, d+1);
             fprintf(out, ")");
             break;
         case tSeqExpr:

@@ -88,7 +88,7 @@ N_Expr RecordExpr(Pos pos, Symbol ty, List fields) {
     p->kind=tRecordExpr;
     p->pos=pos;
     p->as.record.ty=ty;
-    p->as.record.fields=fields;
+    p->as.record.efields=fields;
     return p;
 }
 

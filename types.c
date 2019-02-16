@@ -35,17 +35,17 @@ Ty Ty_String(void) { return &tyString; }
 
 Ty Ty_Void(void) { return &tyVoid; }
 
-Ty Ty_Record(List fields) {
+Ty Ty_Record(List tyFields) {
     Ty p = CHECKED_MALLOC(struct sTy);
     p->kind = tTyRecord;
-    p->as.fields = fields;
+    p->as.fields = tyFields;
     return p;
 }
 
-Ty Ty_Array(Ty ty) {
+Ty Ty_Array(Ty elTy) {
     Ty p = CHECKED_MALLOC(struct sTy);
     p->kind = tTyArray;
-    p->as.array = ty;
+    p->as.array = elTy;
     return p;
 }
 
