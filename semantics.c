@@ -152,7 +152,19 @@ static int CheckTypesDecl(N_Decl decl) {
         SymTableEnter(tEnv, nType->name, Ty_Name(nType->name, NULL));
         typesList = typesList->next;
     }
-    return CheckTypesList(decl->as.types);
+    int res =  CheckTypesList(decl->as.types);
+    // check for infinite recursion in types
+    typesList = decl->as.types;
+    while (typesList) {
+        N_NameType nType = (N_NameType)typesList->data;
+        Ty tyFound = SymTableLookup(tEnv, nType->name);
+        // tyFound should be a named type, if not it's an error
+        if (tyFound == Ty_Actual(tyFound)) {
+            CheckError(nType->pos, "infinite recursive type %s", SymName(nType->name));
+        }
+        typesList = typesList->next;
+    }
+    return res;
 }
 
 static List FormalTypeList(List params, Pos pos) {
@@ -177,6 +189,8 @@ static List FormalTypeList(List params, Pos pos) {
 
 static void CheckFunDecls(N_Decl decl) {
     List funcs = decl->as.functions;
+    // enter stub function decl entries for mutually recursive function calls
+    // in the declarations
     while (funcs) {
         N_FunDecl funcDecl = (N_FunDecl)funcs->data;
         List formals = FormalTypeList(funcDecl->params, funcDecl->pos);
@@ -186,6 +200,27 @@ static void CheckFunDecls(N_Decl decl) {
         }
         EnvEntry funcEntry = E_FunEntry(formals, resultTy);
         SymTableEnter(vEnv, funcDecl->name, funcEntry);
+        funcs = funcs->next;
+    }
+
+    funcs = decl->as.functions;
+    while (funcs) {
+        N_FunDecl funcDecl = (N_FunDecl)funcs->data;
+        EnvEntry funcEntry = SymTableLookup(vEnv, funcDecl->name);
+        SymTableBeginScope(vEnv);
+        List params = funcDecl->params;
+        List f = funcEntry->as.fun.formals;
+        while (params) {
+            N_Field nfield = (N_Field)params->data;
+            Symbol fieldName = nfield->name;
+            Ty formalTy = (Ty)f->data;
+            EnvEntry varEntry = E_VarEntry(formalTy);
+            SymTableEnter(vEnv, fieldName, varEntry);
+            params = params->next;
+            f = f->next;
+        }
+        CheckExpr(funcDecl->body);
+        SymTableEndScope(vEnv);
         funcs = funcs->next;
     }
 }
@@ -307,13 +342,16 @@ static ExprTy CheckIfExpr(N_Expr expr) {
         CheckError(expr->pos, "if test condition must evaluate to int");
     }
     ExprTy ifRes = CheckExpr(expr->as.iff.then);
+    if (ifRes.ty->kind != tTyVoid) {
+        CheckError(expr->as.iff.then->pos, "if 'then' condition must evaluate to unit type");
+    }
     if (expr->as.iff.elsee) {
         ExprTy elseRes = CheckExpr(expr->as.iff.elsee);
-        if (ifRes.ty->kind != elseRes.ty->kind) {
-            CheckError(expr->pos, "if cond and else must evaluate to same type");
+        if (elseRes.ty->kind != tTyVoid) {
+            CheckError(expr->pos, "if 'else' condition must evaluate to unit type");
         }
     }
-    return ExprType(NULL, ifRes.ty);
+    return ExprType(NULL, Ty_Void());
 }
 
 static ExprTy CheckWhileExpr(N_Expr expr) {
