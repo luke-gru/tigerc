@@ -66,6 +66,7 @@ static ExprTy CheckVarDecl(N_Decl decl) {
         CheckError(decl->pos, "initializer has incorrect type");
     }
     SymTableEnter(vEnv, varName, E_VarEntry(tyFound));
+    CHECK_DEBUG("/checking varDecl");
     return ExprType(NULL, tyFound);
 }
 
@@ -125,12 +126,9 @@ static Ty CheckType(N_Type ty) {
 }
 
 static int CheckNameType(N_NameType nType) {
-    if (SymTableLookup(tEnv, nType->name) != NULL) {
-        CheckError(nType->pos, "Type %s already declared");
-        return -1;
-    }
     CHECK_DEBUG("Entering type '%s'", SymName(nType->name));
-    SymTableEnter(tEnv, nType->name, CheckType(nType->ty));
+    Ty tyFound = SymTableLookup(tEnv, nType->name);
+    tyFound->as.name.ty = CheckType(nType->ty);
     return 0;
 }
 
@@ -142,7 +140,16 @@ static int CheckTypesList(List typesList) {
 
 static int CheckTypesDecl(N_Decl decl) {
     List typesList = decl->as.types;
-    return CheckTypesList(typesList);
+    while (typesList) {
+        N_NameType nType = (N_NameType)typesList->data;
+        if (SymTableLookup(tEnv, nType->name) != NULL) {
+            CheckError(nType->pos, "Type %s already declared");
+        }
+        // enter type placeholder for recursive types
+        SymTableEnter(tEnv, nType->name, Ty_Name(nType->name, NULL));
+        typesList = typesList->next;
+    }
+    return CheckTypesList(decl->as.types);
 }
 
 static List FormalTypeList(List params, Pos pos) {
@@ -291,6 +298,33 @@ static ExprTy CheckAssignExpr(N_Expr expr) {
     return ExprType(NULL, Ty_Void());
 }
 
+static ExprTy CheckIfExpr(N_Expr expr) {
+    ExprTy testRes = CheckExpr(expr->as.iff.test);
+    if (testRes.ty->kind != tTyInt) {
+        CheckError(expr->pos, "if test condition must evaluate to int");
+    }
+    ExprTy ifRes = CheckExpr(expr->as.iff.then);
+    if (expr->as.iff.elsee) {
+        ExprTy elseRes = CheckExpr(expr->as.iff.elsee);
+        if (ifRes.ty->kind != elseRes.ty->kind) {
+            CheckError(expr->pos, "if cond and else must evaluate to same type");
+        }
+    }
+    return ExprType(NULL, ifRes.ty);
+}
+
+static ExprTy CheckWhileExpr(N_Expr expr) {
+    ExprTy testRes = CheckExpr(expr->as.whilee.test);
+    if (testRes.ty->kind != tTyInt) {
+        CheckError(expr->pos, "while test condition must evaluate to int");
+    }
+    ExprTy bodyRes = CheckExpr(expr->as.whilee.body);
+    if (bodyRes.ty->kind != tTyVoid) {
+        CheckError(expr->pos, "While body must evaluate to unit type");
+    }
+    return ExprType(NULL, bodyRes.ty);
+}
+
 static ExprTy CheckNilExpr(N_Expr expr) {
     return ExprType(NULL, Ty_Nil());
 }
@@ -418,9 +452,9 @@ static ExprTy CheckRecordExpr(N_Expr expr) {
 
     for (p = recTy->as.fields, q = expr->as.record.efields;
         p && q;
-        p = p->next, q= q->next, size++) {
+        p = p->next, q = q->next, size++) {
 
-        N_EField efield = q->data;
+        N_EField efield = (N_EField)q->data;
         ExprTy eFieldRes = CheckExpr(efield->expr);
         TyField tyField = (TyField)p->data;
         if (!Ty_Match(tyField->ty, eFieldRes.ty)) {
@@ -456,6 +490,10 @@ static ExprTy CheckExpr(N_Expr expr) {
             return CheckSeqExpr(expr);
         case tAssignExpr:
             return CheckAssignExpr(expr);
+        case tIfExpr:
+            return CheckIfExpr(expr);
+        case tWhileExpr:
+            return CheckWhileExpr(expr);
         case tArrayExpr:
             return CheckArrayExpr(expr);
         default:
