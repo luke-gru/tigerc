@@ -6,11 +6,16 @@
 #include "types.h"
 #include "env.h"
 #include "errormsg.h"
+#include "translate.h"
+#include "frame.h"
+#include "temp.h"
 
 #define CHECK_DEBUG(msg, ...) CheckDebug(msg, ##__VA_ARGS__)
 
 static SymTable tEnv = NULL; // type sym table
 static SymTable vEnv = NULL; // value sym table
+
+static TrLevel curLevel;
 
 #define CheckError(pos, msg, ...) EM_error(pos, msg, ##__VA_ARGS__)
 
@@ -52,6 +57,7 @@ static ExprTy CheckVarDecl(N_Decl decl) {
     CHECK_DEBUG("checking varDecl");
     ExprTy initRes = CheckExpr(decl->as.var.init);
     Ty initTy = initRes.ty;
+    TrAccess access = Tr_Access(curLevel, decl->as.var.escape);
 
     Symbol varName = decl->as.var.var;
     Symbol tyName = decl->as.var.ty;
@@ -68,7 +74,7 @@ static ExprTy CheckVarDecl(N_Decl decl) {
     if (!Ty_Match(tyFound, initTy)) {
         CheckError(decl->pos, "initializer has incorrect type");
     }
-    SymTableEnter(vEnv, varName, E_VarEntry(tyFound));
+    SymTableEnter(vEnv, varName, E_VarEntry(access, tyFound, false));
     CHECK_DEBUG("/checking varDecl");
     return ExprType(NULL, tyFound);
 }
@@ -187,6 +193,20 @@ static List FormalTypeList(List params, Pos pos) {
     return q;
 }
 
+static List FormalEscapeList(List params) {
+    List ret = NULL, last = NULL;
+    while (params) {
+        if (last) {
+            last->next = BoolList(true, NULL); // TODO: analyze escapes
+            last = last->next;
+        } else {
+            ret = last = BoolList(true, NULL);
+        }
+        params = params->next;
+    }
+    return ret;
+}
+
 static void CheckFunDecls(N_Decl decl) {
     List funcs = decl->as.functions;
     // enter stub function decl entries for mutually recursive function calls
@@ -194,11 +214,14 @@ static void CheckFunDecls(N_Decl decl) {
     while (funcs) {
         N_FunDecl funcDecl = (N_FunDecl)funcs->data;
         List formals = FormalTypeList(funcDecl->params, funcDecl->pos);
+        List escapes = FormalEscapeList(funcDecl->params);
+        TempLabel funcLabel = NewLabel();
         Ty resultTy = Ty_Void();
         if (funcDecl->result) {
             resultTy = LookupType(funcDecl->result, funcDecl->pos);
         }
-        EnvEntry funcEntry = E_FunEntry(formals, resultTy);
+        TrLevel newLevel = Tr_NewLevel(curLevel, funcLabel, escapes);
+        EnvEntry funcEntry = E_FunEntry(newLevel, funcLabel, formals, resultTy);
         SymTableEnter(vEnv, funcDecl->name, funcEntry);
         funcs = funcs->next;
     }
@@ -214,12 +237,16 @@ static void CheckFunDecls(N_Decl decl) {
             N_Field nfield = (N_Field)params->data;
             Symbol fieldName = nfield->name;
             Ty formalTy = (Ty)f->data;
-            EnvEntry varEntry = E_VarEntry(formalTy);
+            TrAccess access = Tr_Access(curLevel, true);
+            EnvEntry varEntry = E_VarEntry(access, formalTy, false);
             SymTableEnter(vEnv, fieldName, varEntry);
             params = params->next;
             f = f->next;
         }
+        TrLevel oldLevel = curLevel;
+        curLevel = funcEntry->as.fun.level;
         CheckExpr(funcDecl->body);
+        curLevel = oldLevel;
         SymTableEndScope(vEnv);
         funcs = funcs->next;
     }
@@ -252,10 +279,12 @@ static int CheckDecls(List decls) {
 // IN
 //   expr
 static ExprTy CheckLetExpr(N_Expr expr) {
+    SymTableBeginScope(tEnv);
     SymTableBeginScope(vEnv);
     CheckDecls(expr->as.let.decls);
     ExprTy res = CheckExpr(expr->as.let.body);
     SymTableEndScope(vEnv);
+    SymTableEndScope(tEnv);
     return res;
 }
 
@@ -293,8 +322,19 @@ static ExprTy CheckFieldVar(N_Var var) {
     return ExprType(NULL, Ty_Int());
 }
 
-static ExprTy CheckSubscriptVar(N_Var var) {
-    return ExprType(NULL, Ty_Int()); // TODO
+static ExprTy CheckSubscriptVar(N_Var svar) {
+    N_Var arrayVar = svar->as.subscript.var;
+    N_Expr exprVar = svar->as.subscript.expr;
+
+    ExprTy arrayRes = CheckVar(arrayVar);
+    if (arrayRes.ty->kind != tTyArray) {
+        CheckError(svar->pos, "subscripted variable not an array");
+    }
+    ExprTy indexRes = CheckExpr(exprVar);
+    if (indexRes.ty->kind != tTyInt) {
+        CheckError(exprVar->pos, "array index needs to be of type int");
+    }
+    return ExprType(NULL, arrayRes.ty->as.array);
 }
 
 static ExprTy CheckVar(N_Var var) {
@@ -376,7 +416,8 @@ static ExprTy CheckForExpr(N_Expr expr) {
         CheckError(expr->as.forr.hi->pos, "for loop high expr must evaluate to int");
     }
     SymTableBeginScope(vEnv);
-    SymTableEnter(vEnv, expr->as.forr.var, E_VarEntry(Ty_Int()));
+    TrAccess varAccess = Tr_Access(curLevel, true);
+    SymTableEnter(vEnv, expr->as.forr.var, E_VarEntry(varAccess, Ty_Int(), true));
     ExprTy bodyRes = CheckExpr(expr->as.forr.body);
     if (bodyRes.ty->kind != tTyVoid) {
         CheckError(expr->as.forr.body->pos, "for body should evaluate to unit type");
@@ -574,5 +615,6 @@ struct sExprTy ExprType(Tr_Expr trExpr, Ty ty) {
 ExprTy TypeCheck(N_Expr program) {
     tEnv = E_Base_tEnv();
     vEnv = E_Base_vEnv();
+    curLevel = Tr_Outermost();
     return CheckExpr(program);
 }
