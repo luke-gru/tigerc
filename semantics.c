@@ -55,13 +55,16 @@ static ExprTy CheckVarDecl(N_Decl decl) {
 
     Symbol varName = decl->as.var.var;
     Symbol tyName = decl->as.var.ty;
-
-    assert(tyName);
-
-    Ty tyFound = LookupType(tyName, decl->pos);
-    if (!tyFound) {
-        tyFound = Ty_Int(); // error handling case
+    Ty tyFound = NULL;
+    if (tyName) {
+        tyFound = LookupType(tyName, decl->pos);
+        if (!tyFound) {
+            tyFound = Ty_Int();
+        }
+    } else {
+        tyFound = initRes.ty;
     }
+
     if (!Ty_Match(tyFound, initTy)) {
         CheckError(decl->pos, "initializer has incorrect type");
     }
@@ -325,6 +328,25 @@ static ExprTy CheckWhileExpr(N_Expr expr) {
     return ExprType(NULL, bodyRes.ty);
 }
 
+static ExprTy CheckForExpr(N_Expr expr) {
+    ExprTy loRes = CheckExpr(expr->as.forr.lo);
+    if (loRes.ty->kind != tTyInt) {
+        CheckError(expr->as.forr.lo->pos, "for loop low expr must evaluate to int");
+    }
+    ExprTy hiRes = CheckExpr(expr->as.forr.hi);
+    if (hiRes.ty->kind != tTyInt) {
+        CheckError(expr->as.forr.hi->pos, "for loop high expr must evaluate to int");
+    }
+    SymTableBeginScope(vEnv);
+    SymTableEnter(vEnv, expr->as.forr.var, E_VarEntry(Ty_Int()));
+    ExprTy bodyRes = CheckExpr(expr->as.forr.body);
+    if (bodyRes.ty->kind != tTyVoid) {
+        CheckError(expr->as.forr.body->pos, "for body should evaluate to unit type");
+    }
+    SymTableEndScope(vEnv);
+    return ExprType(NULL, Ty_Void());
+}
+
 static ExprTy CheckNilExpr(N_Expr expr) {
     return ExprType(NULL, Ty_Nil());
 }
@@ -494,6 +516,8 @@ static ExprTy CheckExpr(N_Expr expr) {
             return CheckIfExpr(expr);
         case tWhileExpr:
             return CheckWhileExpr(expr);
+        case tForExpr:
+            return CheckForExpr(expr);
         case tArrayExpr:
             return CheckArrayExpr(expr);
         default:
