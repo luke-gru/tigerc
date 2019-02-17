@@ -168,6 +168,41 @@ TrExpr Tr_IfExpr(TrExpr cond, TrExpr then, TrExpr else_) {
     }
 }
 
+TrExpr Tr_WhileExpr(TrExpr cond, TrExpr body) {
+    TempLabel startl = NewLabel();
+    TempLabel loopl = NewLabel();
+    TempLabel donel = NewLabel();
+    struct sTrCx cx = Tr_UnCx(cond);
+
+    FillPatch(cx.trues, loopl);
+    FillPatch(cx.falses, donel);
+    return Tr_Nx(Ir_Seq_Stmt(vDataList(
+          6,
+          Ir_Label_Stmt(startl),
+          cx.stmt,
+          Ir_Label_Stmt(loopl),
+          Tr_UnNx(body),
+          Ir_Jump_Stmt(Ir_Name_Expr(startl), DataList(startl, NULL)),
+          Ir_Label_Stmt(donel))));
+}
+
+TrExpr Tr_ForExpr(TrAccess access, TrExpr lo, TrExpr hi, TrExpr body) {
+    IrExpr var = Frame_Expr(access->faccess, Ir_Tmp_Expr(Frame_fp()));
+    TempLabel startl = NewLabel();
+    TempLabel loopl = NewLabel();
+    TempLabel donel = NewLabel();
+    IrStmt cond = Ir_Cjump_Stmt(IR_LE, var, Tr_UnEx(hi), loopl, donel);
+    return Tr_Nx(Ir_Seq_Stmt(vDataList(
+          7,
+          Ir_Move_Stmt(var, Tr_UnEx(lo)),
+          Ir_Label_Stmt(startl),
+          cond,
+          Ir_Label_Stmt(loopl),
+          Tr_UnNx(body),
+          Ir_Move_Stmt(var, Ir_Binop_Expr(IR_PLUS, var, Ir_Const_Expr(1))),
+          Ir_Label_Stmt(donel))));
+}
+
 static TrAccess Tr_StaticLink(TrLevel level) {
     assert(level);
     return level->formals->data;

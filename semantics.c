@@ -419,7 +419,7 @@ static ExprTy CheckWhileExpr(N_Expr expr) {
     if (bodyRes.ty->kind != tTyVoid) {
         CheckError(expr->pos, "While body must evaluate to unit type");
     }
-    return ExprType(NULL, bodyRes.ty);
+    return ExprType(Tr_WhileExpr(testRes.trExpr, bodyRes.trExpr), bodyRes.ty);
 }
 
 static ExprTy CheckForExpr(N_Expr expr) {
@@ -439,7 +439,7 @@ static ExprTy CheckForExpr(N_Expr expr) {
         CheckError(expr->as.forr.body->pos, "for body should evaluate to unit type");
     }
     SymTableEndScope(vEnv);
-    return ExprType(NULL, Ty_Void());
+    return ExprType(Tr_ForExpr(varAccess, loRes.trExpr, hiRes.trExpr, bodyRes.trExpr), Ty_Void());
 }
 
 static ExprTy CheckNilExpr(N_Expr expr) {
@@ -536,7 +536,7 @@ static ExprTy CheckOpExpr(N_Expr expr) {
             if (left.ty->kind != tTyInt && left.ty->kind != tTyString) {
                 CheckError(expr->pos, "the type of comparison's operand must be int or string");
             }
-            return ExprType(NULL, left.ty);
+            return ExprType(Tr_RelopExpr(op-LtOp+IR_LT, left.trExpr, right.trExpr), left.ty);
     }
     assert(0);
 }
