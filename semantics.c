@@ -57,7 +57,7 @@ static ExprTy CheckVarDecl(N_Decl decl) {
     CHECK_DEBUG("checking varDecl");
     ExprTy initRes = CheckExpr(decl->as.var.init);
     Ty initTy = initRes.ty;
-    TrAccess access = Tr_Access(curLevel, decl->as.var.escape);
+    TrAccess access = Tr_AllocLocal(curLevel, decl->as.var.escape);
 
     Symbol varName = decl->as.var.var;
     Symbol tyName = decl->as.var.ty;
@@ -237,7 +237,7 @@ static void CheckFunDecls(N_Decl decl) {
             N_Field nfield = (N_Field)params->data;
             Symbol fieldName = nfield->name;
             Ty formalTy = (Ty)f->data;
-            TrAccess access = Tr_Access(curLevel, true);
+            TrAccess access = Tr_AllocLocal(curLevel, true);
             EnvEntry varEntry = E_VarEntry(access, formalTy, false);
             SymTableEnter(vEnv, fieldName, varEntry);
             params = params->next;
@@ -416,7 +416,7 @@ static ExprTy CheckForExpr(N_Expr expr) {
         CheckError(expr->as.forr.hi->pos, "for loop high expr must evaluate to int");
     }
     SymTableBeginScope(vEnv);
-    TrAccess varAccess = Tr_Access(curLevel, true);
+    TrAccess varAccess = Tr_AllocLocal(curLevel, true);
     SymTableEnter(vEnv, expr->as.forr.var, E_VarEntry(varAccess, Ty_Int(), true));
     ExprTy bodyRes = CheckExpr(expr->as.forr.body);
     if (bodyRes.ty->kind != tTyVoid) {

@@ -15,7 +15,7 @@ typedef struct sTrLevel  *TrLevel;
 
 struct sTrAccess {
     TrLevel level;
-    bool escape;
+    FAccess faccess;
 };
 
 struct sTrLevel {
@@ -28,6 +28,7 @@ struct sTrLevel {
 TrLevel Tr_Outermost(void);
 TrLevel Tr_NewLevel(TrLevel parent, TempLabel name, List formalEscapes);
 List Tr_Formals(TrLevel level);
-TrAccess Tr_Access(TrLevel level, bool escape);
+TrAccess Tr_Access(TrLevel level, FAccess faccess);
+TrAccess Tr_AllocLocal(TrLevel level, bool escape);
 
 #endif

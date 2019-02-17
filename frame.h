@@ -13,6 +13,6 @@ typedef struct sFAccess *FAccess;
 Frame NewFrame(TempLabel name, List formalEscapes);
 TempLabel FrameName(Frame fr);
 List FrameFormals(Frame fr);
-FAccess AllocLocal(Frame fr, bool escape);
+FAccess FrameAllocLocal(Frame fr, bool escape);
 
 #endif

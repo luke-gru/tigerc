@@ -39,8 +39,8 @@ Frame NewFrame(TempLabel name, List formalEscapes) {
     List formalAccessesLast = NULL;
     int i = 0;
     while (formalEscapes) {
-        FAccess faccess;
-        if (formalAccesses->b || i >= FRAME_ARGS_REG) {
+        FAccess faccess = NULL;
+        if (formalEscapes->b || i >= FRAME_ARGS_REG) {
             faccess = F_AccessFrame(i*FRAME_WORD_SIZE);
         } else {
             faccess = F_AccessReg(NewTemp());
@@ -53,6 +53,7 @@ Frame NewFrame(TempLabel name, List formalEscapes) {
             formalAccessesLast = formalAccesses;
         }
         formalEscapes = formalEscapes->next;
+        i++;
     }
     f->formals = formalAccesses;
     f->locals = NULL;
@@ -60,3 +61,28 @@ Frame NewFrame(TempLabel name, List formalEscapes) {
     return f;
 }
 
+FAccess FrameAllocLocal(Frame fr, bool escape) {
+    FAccess faccess;
+
+    if (escape) {
+        fr->localCount++;
+        /* -2 for the the return address and frame pointer. */
+        faccess = F_AccessFrame(FRAME_WORD_SIZE * (-2 - fr->localCount));
+    } else {
+        faccess = F_AccessReg(NewTemp());
+    }
+    if (fr->locals) {
+        List p = fr->locals;
+        while (p->next) {
+            p = p->next;
+        }
+        p->next = DataList(faccess, NULL);
+    } else {
+        fr->locals = DataList(faccess, NULL);
+    }
+    return faccess;
+}
+
+List FrameFormals(Frame fr) {
+    return fr->formals;
+}
