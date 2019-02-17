@@ -5,11 +5,11 @@
 #include "translate.h" // for Tr_Expr
 #include "types.h"
 
-struct sExprTy { Tr_Expr trExpr; Ty ty; };
+struct sExprTy { TrExpr trExpr; Ty ty; };
 
 typedef struct sExprTy ExprTy;
 
-struct sExprTy ExprType(Tr_Expr trExpr, Ty ty);
+struct sExprTy ExprType(TrExpr trExpr, Ty ty);
 
 ExprTy TypeCheck(N_Expr program);
 

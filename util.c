@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "util.h"
 
 void *checked_malloc(size_t sz) {
@@ -33,6 +34,23 @@ List BoolList(bool b, List next) {
     p->b = b;
     p->next = next;
     return p;
+}
+
+List vDataList(int n, ...) {
+    List result = NULL, next = NULL;
+    va_list ap;
+
+    va_start(ap, n);
+    for (; n > 0; n--) {
+        void *data = va_arg(ap, void *);
+        List p = DataList(data, NULL);
+        if (result) {
+            next = next->next = p;
+        } else {
+            result = next = p;
+        }
+    }
+    return result;
 }
 
 // join list2 to end of list1

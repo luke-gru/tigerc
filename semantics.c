@@ -36,7 +36,7 @@ static void CheckDebug(const char *msg, ...) {
 }
 
 static ExprTy VoidExprTy(void) {
-    return ExprType(NULL, Ty_Void());
+    return ExprType(Tr_NumExpr(0), Ty_Void());
 }
 
 static ExprTy CheckExpr(N_Expr expr);
@@ -76,7 +76,8 @@ static ExprTy CheckVarDecl(N_Decl decl) {
     }
     SymTableEnter(vEnv, varName, E_VarEntry(access, tyFound, false));
     CHECK_DEBUG("/checking varDecl");
-    return ExprType(NULL, tyFound);
+    assert(initRes.trExpr);
+    return ExprType(Tr_AssignExpr(Tr_SimpleVar(access, curLevel), initRes.trExpr), tyFound);
 }
 
 static Ty CheckArrayType(N_Type ty) {
@@ -427,11 +428,11 @@ static ExprTy CheckForExpr(N_Expr expr) {
 }
 
 static ExprTy CheckNilExpr(N_Expr expr) {
-    return ExprType(NULL, Ty_Nil());
+    return ExprType(Tr_NumExpr(0), Ty_Nil());
 }
 
 static ExprTy CheckIntExpr(N_Expr expr) {
-    return ExprType(NULL, Ty_Int());
+    return ExprType(Tr_NumExpr(expr->as.intVal), Ty_Int());
 }
 
 static ExprTy CheckStringExpr(N_Expr expr) {
@@ -535,7 +536,7 @@ static ExprTy CheckArrayExpr(N_Expr expr) {
     if (!Ty_Match(arrayTy->as.array, initRes.ty)) {
         CheckError(expr->pos, "array initializer has incorrect type");
     }
-    return ExprType(NULL, arrayTy);
+    return ExprType(Tr_ArrayExpr(sizeRes.trExpr, initRes.trExpr), arrayTy);
 }
 
 static ExprTy CheckRecordExpr(N_Expr expr) {
@@ -605,7 +606,7 @@ static ExprTy CheckExpr(N_Expr expr) {
     }
 }
 
-struct sExprTy ExprType(Tr_Expr trExpr, Ty ty) {
+struct sExprTy ExprType(TrExpr trExpr, Ty ty) {
     struct sExprTy e;
     e.trExpr = trExpr;
     e.ty = ty;

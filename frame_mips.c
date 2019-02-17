@@ -1,4 +1,6 @@
+#include "util.h"
 #include "frame.h"
+#include "ir.h"
 
 #define FRAME_ARGS_REG 4
 const int FRAME_WORD_SIZE = 4;
@@ -85,4 +87,36 @@ FAccess FrameAllocLocal(Frame fr, bool escape) {
 
 List FrameFormals(Frame fr) {
     return fr->formals;
+}
+
+// frame pointer always in same temp
+Temp Frame_fp(void) {
+    static Temp _fp = NULL;
+
+    if (!_fp) {
+        _fp = NewTemp();
+    }
+    return _fp;
+}
+
+// return IR for frame access relative to `fp` if in memory,
+// or the register itself if in register.
+IrExpr Frame_Expr(FAccess faccess, IrExpr fp) {
+    switch (faccess->kind) {
+        case tAccessFrame:
+            return Ir_Mem_Expr(Ir_Binop_Expr(
+                IR_PLUS,
+                Ir_Const_Expr(faccess->as.offset),
+                fp));
+
+        case tAccessReg:
+            return Ir_Tmp_Expr(faccess->as.reg);
+    }
+
+    assert(0);
+    return NULL;
+}
+
+IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args) {
+    return Ir_Call_Expr(Ir_Name_Expr(NamedLabel(fnName)), args);
 }

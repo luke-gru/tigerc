@@ -3,6 +3,7 @@
 
 #include "util.h"
 #include "temp.h"
+#include "ir.h"
 
 struct sFrame;  // machine dependent
 struct sFAccess; // machine dependent, either reg or stack
@@ -14,5 +15,9 @@ Frame NewFrame(TempLabel name, List formalEscapes);
 TempLabel FrameName(Frame fr);
 List FrameFormals(Frame fr);
 FAccess FrameAllocLocal(Frame fr, bool escape);
+
+Temp Frame_fp(void);
+IrExpr Frame_Expr(FAccess faccess, IrExpr fp);
+IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args);
 
 #endif
