@@ -5,6 +5,8 @@
 #include "temp.h"
 #include "ir.h"
 
+extern const int FRAME_WORD_SIZE;
+
 struct sFrame;  // machine dependent
 struct sFAccess; // machine dependent, either reg or stack
 

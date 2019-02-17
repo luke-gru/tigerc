@@ -6,9 +6,9 @@
 #include "temp.h"
 #include "ir.h"
 
-struct sTrCx {
-    List trues;
-    List falses;
+struct sTrCx { // used as value struct, never allocated in heap
+    List/*<TempLabel>*/ trues;
+    List/*<TempLabel>*/ falses;
     IrStmt stmt;
 };
 
@@ -23,7 +23,7 @@ struct sTrExpr {
     union {
         IrExpr ex;
         IrStmt nx;
-        TrCx cx;
+        struct sTrCx cx;
     } as;
 };
 
@@ -57,10 +57,18 @@ TrExpr Tr_NumExpr(int num);
 TrExpr Tr_SimpleVar(TrAccess access, TrLevel level);
 TrExpr Tr_AssignExpr(TrExpr lhs, TrExpr rhs);
 TrExpr Tr_ArrayExpr(TrExpr size, TrExpr init);
+TrExpr Tr_BinopExpr(IrBinop op, TrExpr size, TrExpr init);
+TrExpr Tr_RelopExpr(IrRelop op, TrExpr size, TrExpr init);
+TrExpr Tr_FieldVar(TrExpr recExpr, int fieldIdx);
+TrExpr Tr_RecordExpr(List/*<TrExpr>*/ fieldExprs, int fieldSize);
 
 TrExpr Tr_Ex(IrExpr irExpr);
 TrExpr Tr_Nx(IrStmt irStmt);
-TrExpr Tr_Cx(TrCx cx);
-IrExpr Tr_UnEx(TrExpr trExpr);
+TrExpr Tr_Cx(List falseLabels, List trueLabels, IrStmt stmt);
+
+IrExpr Tr_UnEx(TrExpr trExpr); // TrExpr -> IrExpr
+IrStmt Tr_UnNx(TrExpr trExpr); // TrExpr -> IrStmt
+
+void Tr_PPExpr(TrExpr expr);
 
 #endif

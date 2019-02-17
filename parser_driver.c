@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
         (void)tyCheckRes;
         if (EM_errors == 0) {
             fprintf(stdout, "Type check succeeded\n");
+            Tr_PPExpr(tyCheckRes.trExpr);
         } else {
             fprintf(stderr, "Type check failed\n");
         }

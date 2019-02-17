@@ -293,34 +293,36 @@ static ExprTy CheckSimpleVar(N_Var var) {
     EnvEntry varEntry = (EnvEntry)SymTableLookup(vEnv, var->as.simple);
     if (!varEntry) {
         CheckError(var->pos, "Variable '%s' not declared", SymName(var->as.simple));
-        return ExprType(NULL, Ty_Int());
+        return ExprType(Tr_NumExpr(0), Ty_Int());
     } else if (varEntry->kind != tVarEntry) {
         CheckError(var->pos, "Expected '%s' to be a variable, not a function", SymName(var->as.simple));
-        return ExprType(NULL, Ty_Int());
+        return ExprType(Tr_NumExpr(0), Ty_Int());
     }
-    return ExprType(NULL, Ty_Actual(varEntry->as.var.ty));
+    return ExprType(Tr_SimpleVar(varEntry->as.var.access, curLevel), Ty_Actual(varEntry->as.var.ty));
 }
 
 static ExprTy CheckFieldVar(N_Var var) {
     ExprTy recordVar = CheckVar(var->as.field.var);
     Ty recordTy = recordVar.ty;
+    int i = 0;
 
     if (recordTy->kind != tTyRecord) {
         CheckError(var->pos, "Expected record type variable");
-        return ExprType(NULL, Ty_Int());
+        return ExprType(Tr_NumExpr(0), Ty_Int());
     }
 
     List fields = recordTy->as.fields;
     while (fields) {
         TyField tfield = (TyField)fields->data;
         if (SymEq(tfield->name, var->as.field.sym)) {
-            return ExprType(NULL, Ty_Actual(tfield->ty));
+            return ExprType(Tr_FieldVar(recordVar.trExpr, i), Ty_Actual(tfield->ty));
         }
+        i++;
         fields = fields->next;
     }
 
     CheckError(var->pos, "There is no field named '%s'", SymName(var->as.field.sym));
-    return ExprType(NULL, Ty_Int());
+    return ExprType(Tr_NumExpr(0), Ty_Int());
 }
 
 static ExprTy CheckSubscriptVar(N_Var svar) {
@@ -374,7 +376,7 @@ static ExprTy CheckAssignExpr(N_Expr expr) {
     if (!Ty_Match(varRes.ty, exprRes.ty)) {
         CheckError(expr->pos, "Type mismatch");
     }
-    return ExprType(NULL, Ty_Void());
+    return ExprType(Tr_AssignExpr(varRes.trExpr, exprRes.trExpr), Ty_Void());
 }
 
 static ExprTy CheckIfExpr(N_Expr expr) {
@@ -494,13 +496,13 @@ static ExprTy CheckOpExpr(N_Expr expr) {
             if (right.ty->kind != tTyInt) {
                 CheckError(expr->as.op.right->pos, "int required");
             }
-            return ExprType(NULL, Ty_Int());
+            return ExprType(Tr_BinopExpr(op-PlusOp+IR_PLUS, left.trExpr, right.trExpr), Ty_Int());
         case EqOp:
         case NeqOp:
             if (!Ty_Match(left.ty, right.ty)) {
                 CheckError(expr->pos, "the type of two operands must be the same");
             }
-            return ExprType(NULL, Ty_Int());
+            return ExprType(Tr_RelopExpr(op-EqOp+IR_EQ, left.trExpr, right.trExpr), Ty_Int());
         case LtOp:
         case LeOp:
         case GtOp:
@@ -542,10 +544,11 @@ static ExprTy CheckArrayExpr(N_Expr expr) {
 static ExprTy CheckRecordExpr(N_Expr expr) {
     Ty recTy = LookupType(expr->as.record.ty, expr->pos);
     List p, q;
+    List fieldsList = NULL, next = NULL;
     int size = 0;
 
     if (!recTy) {
-        return ExprType(NULL, Ty_Nil());
+        return ExprType(Tr_NumExpr(0), Ty_Nil());
     }
     if (recTy->kind != tTyRecord) {
         CheckError(expr->pos, "'%s' is not a record type",
@@ -562,12 +565,18 @@ static ExprTy CheckRecordExpr(N_Expr expr) {
         if (!Ty_Match(tyField->ty, eFieldRes.ty)) {
             CheckError(efield->pos, "wrong field type");
         }
+        if (fieldsList) {
+            next->next = DataList(eFieldRes.trExpr, NULL);
+            next = next->next;
+        } else {
+            fieldsList = next = DataList(eFieldRes.trExpr, NULL);
+        }
     }
 
     if (p || q) {
         CheckError(expr->pos, "wrong field number");
     }
-    return ExprType(NULL, recTy);
+    return ExprType(Tr_RecordExpr(fieldsList, size), recTy);
 }
 
 static ExprTy CheckExpr(N_Expr expr) {
