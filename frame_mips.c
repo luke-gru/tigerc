@@ -120,3 +120,9 @@ IrExpr Frame_Expr(FAccess faccess, IrExpr fp) {
 IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args) {
     return Ir_Call_Expr(Ir_Name_Expr(NamedLabel(fnName)), args);
 }
+
+int Frame_Offset(FAccess faccess) {
+    assert(faccess && faccess->kind == tAccessFrame);
+    return faccess->as.offset;
+}
+

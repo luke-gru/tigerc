@@ -10,6 +10,8 @@
 #include "frame.h"
 #include "temp.h"
 
+#define PRINT_DECLS 1
+
 #define CHECK_DEBUG(msg, ...) CheckDebug(msg, ##__VA_ARGS__)
 
 static SymTable tEnv = NULL; // type sym table
@@ -77,7 +79,12 @@ static ExprTy CheckVarDecl(N_Decl decl) {
     SymTableEnter(vEnv, varName, E_VarEntry(access, tyFound, false));
     CHECK_DEBUG("/checking varDecl");
     assert(initRes.trExpr);
-    return ExprType(Tr_AssignExpr(Tr_SimpleVar(access, curLevel), initRes.trExpr), tyFound);
+    ExprTy ret = ExprType(Tr_AssignExpr(Tr_SimpleVar(access, curLevel), initRes.trExpr), tyFound);
+#if PRINT_DECLS
+    fprintf(stdout, "Var decl '%s' IR:\n", SymName(varName));
+    Tr_PPExpr(ret.trExpr);
+#endif
+    return ret;
 }
 
 static Ty CheckArrayType(N_Type ty) {
@@ -246,7 +253,11 @@ static void CheckFunDecls(N_Decl decl) {
         }
         TrLevel oldLevel = curLevel;
         curLevel = funcEntry->as.fun.level;
-        CheckExpr(funcDecl->body);
+        ExprTy bodyRes = CheckExpr(funcDecl->body);
+#if PRINT_DECLS
+    fprintf(stdout, "Function decl '%s' IR:\n", SymName(funcDecl->name));
+    Tr_PPExpr(bodyRes.trExpr);
+#endif
         curLevel = oldLevel;
         SymTableEndScope(vEnv);
         funcs = funcs->next;
@@ -385,16 +396,18 @@ static ExprTy CheckIfExpr(N_Expr expr) {
         CheckError(expr->pos, "if test condition must evaluate to int");
     }
     ExprTy ifRes = CheckExpr(expr->as.iff.then);
-    if (ifRes.ty->kind != tTyVoid) {
-        CheckError(expr->as.iff.then->pos, "if 'then' condition must evaluate to unit type");
-    }
+    /*if (ifRes.ty->kind != tTyVoid) {*/
+        /*CheckError(expr->as.iff.then->pos, "if 'then' condition must evaluate to unit type");*/
+    /*}*/
     if (expr->as.iff.elsee) {
         ExprTy elseRes = CheckExpr(expr->as.iff.elsee);
-        if (elseRes.ty->kind != tTyVoid) {
-            CheckError(expr->pos, "if 'else' condition must evaluate to unit type");
+        if (elseRes.ty->kind != ifRes.ty->kind) {
+            CheckError(expr->pos, "if 'else' condition must evaluate to same type as 'if' condition");
         }
+        return ExprType(Tr_IfExpr(testRes.trExpr, ifRes.trExpr, elseRes.trExpr), Ty_Void());
+    } else {
+        return ExprType(Tr_IfExpr(testRes.trExpr, ifRes.trExpr, NULL), Ty_Void());
     }
-    return ExprType(NULL, Ty_Void());
 }
 
 static ExprTy CheckWhileExpr(N_Expr expr) {
@@ -446,6 +459,7 @@ static ExprTy CheckCallExpr(N_Expr expr) {
     List argExprs = expr->as.call.args;
     EnvEntry funcEntry = SymTableLookup(vEnv, funcName);
     int nArg = 0;
+    List argExprList = NULL, argExprNext = NULL;
     if (!funcEntry) {
         CheckError(expr->pos, "Function '%s' not declared", SymName(funcName));
         return VoidExprTy();
@@ -467,6 +481,14 @@ static ExprTy CheckCallExpr(N_Expr expr) {
                     nArg, SymName(funcName));
         }
 
+        if (argExprList) {
+            argExprNext->next = DataList(argRes.trExpr, NULL);
+            argExprNext = argExprNext->next;
+        } else {
+            argExprList = DataList(argRes.trExpr, NULL);
+            argExprNext = argExprList;
+        }
+
         argExprs = argExprs->next;
         formalTys = formalTys->next;
     }
@@ -477,7 +499,7 @@ static ExprTy CheckCallExpr(N_Expr expr) {
         CheckError(expr->pos, "Expect less arguments");
     }
 
-    return ExprType(NULL, formalResTy);
+    return ExprType(Tr_CallExpr(funcEntry->as.fun.level, funcEntry->as.fun.label, argExprList), formalResTy);
 }
 
 static ExprTy CheckOpExpr(N_Expr expr) {

@@ -12,7 +12,7 @@ struct sTrCx { // used as value struct, never allocated in heap
     IrStmt stmt;
 };
 
-typedef struct sTrCx *TrCx;
+typedef struct sTrCx TrCx;
 
 struct sTrExpr {
     enum {
@@ -61,6 +61,8 @@ TrExpr Tr_BinopExpr(IrBinop op, TrExpr size, TrExpr init);
 TrExpr Tr_RelopExpr(IrRelop op, TrExpr size, TrExpr init);
 TrExpr Tr_FieldVar(TrExpr recExpr, int fieldIdx);
 TrExpr Tr_RecordExpr(List/*<TrExpr>*/ fieldExprs, int fieldSize);
+TrExpr Tr_IfExpr(TrExpr cond, TrExpr then, TrExpr else_);
+TrExpr Tr_CallExpr(TrLevel level, TempLabel label, List/*<TrExpr>*/ args);
 
 TrExpr Tr_Ex(IrExpr irExpr);
 TrExpr Tr_Nx(IrStmt irStmt);
@@ -68,7 +70,9 @@ TrExpr Tr_Cx(List falseLabels, List trueLabels, IrStmt stmt);
 
 IrExpr Tr_UnEx(TrExpr trExpr); // TrExpr -> IrExpr
 IrStmt Tr_UnNx(TrExpr trExpr); // TrExpr -> IrStmt
+struct sTrCx Tr_UnCx(TrExpr expr);
 
+void Tr_PPExprs(List/*<TrExpr>*/ exprs);
 void Tr_PPExpr(TrExpr expr);
 
 #endif

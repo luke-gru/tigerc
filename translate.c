@@ -138,6 +138,52 @@ static void FillPatch(List patches, TempLabel label) {
     }
 }
 
+TrExpr Tr_IfExpr(TrExpr cond, TrExpr then, TrExpr else_) {
+    TempLabel lt = NewLabel();
+    TempLabel lf = NewLabel();
+    TempLabel ldone = NewLabel();
+    struct sTrCx cx = Tr_UnCx(cond);
+    IrExpr result = Ir_Tmp_Expr(NewTemp());
+
+    FillPatch(cx.trues, lt);
+    FillPatch(cx.falses, lf);
+    if (else_) {
+        return Tr_Ex(Ir_Eseq_Expr(Ir_Seq_Stmt(vDataList(
+                7,
+                cx.stmt,
+                Ir_Label_Stmt(lt),
+                Ir_Move_Stmt(Ir_Mem_Expr(result), Tr_UnEx(then)),
+                Ir_Jump_Stmt(Ir_Name_Expr(ldone), DataList(ldone, NULL)),
+                Ir_Label_Stmt(lf),
+                Ir_Move_Stmt(Ir_Mem_Expr(result), Tr_UnEx(else_)),
+                Ir_Label_Stmt(ldone))),
+            result));
+    } else {
+        return Tr_Nx(Ir_Seq_Stmt(vDataList(
+              4,
+              cx.stmt,
+              Ir_Label_Stmt(lt),
+              Tr_UnNx(then),
+              Ir_Label_Stmt(lf))));
+    }
+}
+
+static TrAccess Tr_StaticLink(TrLevel level) {
+    assert(level);
+    return level->formals->data;
+}
+
+TrExpr Tr_CallExpr(TrLevel level, TempLabel label, List/*<TrExpr>*/ args) {
+    IrExpr func = Ir_Name_Expr(label);
+    IrExpr fp = Ir_Const_Expr(Frame_Offset(Tr_StaticLink(level)->faccess));
+    List l_args = DataList(fp, NULL);
+    List l_next = l_args;
+    for (; args; args = args->next) {
+        l_next = l_next->next = DataList(Tr_UnEx(args->data), NULL);
+    }
+    return Tr_Ex(Ir_Call_Expr(func, l_args));
+}
+
 TrExpr Tr_Ex(IrExpr irExpr) {
     TrExpr p = CHECKED_MALLOC(struct sTrExpr);
     p->kind = tTrEx;
@@ -161,7 +207,7 @@ TrExpr Tr_Cx(List trues, List falses, IrStmt stmt) {
     return p;
 }
 
-// turn TrExpr -> IrExpr
+// TrExpr -> IrExpr
 IrExpr Tr_UnEx(TrExpr trExpr) {
     switch (trExpr->kind) {
         case tTrEx:
@@ -191,6 +237,7 @@ IrExpr Tr_UnEx(TrExpr trExpr) {
     }
 }
 
+// TrExpr -> IrStmt
 IrStmt Tr_UnNx(TrExpr trExpr) {
     switch (trExpr->kind) {
         case tTrNx:
@@ -203,6 +250,34 @@ IrStmt Tr_UnNx(TrExpr trExpr) {
     assert(0);
 }
 
+// TrExpr -> struct sTrCx
+struct sTrCx Tr_UnCx(TrExpr expr) {
+    struct sTrCx cx = { 0 };
+
+    switch (expr->kind) {
+        // if expr is 0, jump
+        case tTrEx:
+            cx.stmt = Ir_Cjump_Stmt(
+              IR_EQ, expr->as.ex, Ir_Const_Expr(0), NULL, NULL);
+            cx.trues = DataList(&(cx.stmt->as.cjump.t), NULL);
+            cx.falses = DataList(&(cx.stmt->as.cjump.f), NULL);
+            return cx;
+        case tTrCx:
+            return expr->as.cx;
+        case tTrNx:
+            assert(0);
+    }
+
+    assert(0);
+}
+
 void Tr_PPExpr(TrExpr expr) {
     Ir_PP_Stmts(stdout, DataList(Tr_UnNx(expr), NULL));
+}
+
+void Tr_PPExprs(List/*<TrExpr>*/ exprs) {
+    while (exprs) {
+        Tr_PPExpr((TrExpr)exprs->data);
+        exprs = exprs->next;
+    }
 }

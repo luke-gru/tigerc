@@ -21,5 +21,6 @@ FAccess FrameAllocLocal(Frame fr, bool escape);
 Temp Frame_fp(void);
 IrExpr Frame_Expr(FAccess faccess, IrExpr fp);
 IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args);
+int Frame_Offset(FAccess faccess);
 
 #endif
