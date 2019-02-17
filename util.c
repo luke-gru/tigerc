@@ -66,6 +66,18 @@ List JoinList(List list1, List list2) {
     return list1;
 }
 
+List DataListAppend(List list, void *data) {
+    if (!list) {
+        return DataList(data, NULL);
+    } else {
+        while (list->next) {
+            list = list->next;
+        }
+        list->next = DataList(data, NULL);
+        return list;
+    }
+}
+
 List JoinData(List list, void *data) {
     return JoinList(list, DataList(data, NULL));
 }

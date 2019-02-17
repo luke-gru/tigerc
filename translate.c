@@ -184,6 +184,13 @@ TrExpr Tr_CallExpr(TrLevel level, TempLabel label, List/*<TrExpr>*/ args) {
     return Tr_Ex(Ir_Call_Expr(func, l_args));
 }
 
+TrExpr Tr_StringExpr(string str) {
+    TempLabel label = NewLabel();
+    Frag frag = String_Frag(label, str);
+    Add_Frag(frag);
+    return Tr_Ex(Ir_Name_Expr(label));
+}
+
 TrExpr Tr_Ex(IrExpr irExpr) {
     TrExpr p = CHECKED_MALLOC(struct sTrExpr);
     p->kind = tTrEx;

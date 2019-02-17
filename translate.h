@@ -63,6 +63,7 @@ TrExpr Tr_FieldVar(TrExpr recExpr, int fieldIdx);
 TrExpr Tr_RecordExpr(List/*<TrExpr>*/ fieldExprs, int fieldSize);
 TrExpr Tr_IfExpr(TrExpr cond, TrExpr then, TrExpr else_);
 TrExpr Tr_CallExpr(TrLevel level, TempLabel label, List/*<TrExpr>*/ args);
+TrExpr Tr_StringExpr(string str);
 
 TrExpr Tr_Ex(IrExpr irExpr);
 TrExpr Tr_Nx(IrStmt irStmt);

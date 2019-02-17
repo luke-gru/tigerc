@@ -5,6 +5,9 @@
 #define FRAME_ARGS_REG 4
 const int FRAME_WORD_SIZE = 4;
 
+static List _string_frags = NULL;
+static List _proc_frags = NULL;
+
 struct sFrame {
     TempLabel name;
     List/*<FAccess>*/ formals;
@@ -126,3 +129,23 @@ int Frame_Offset(FAccess faccess) {
     return faccess->as.offset;
 }
 
+Frag String_Frag(TempLabel label, string str) {
+    Frag p = CHECKED_MALLOC(struct sFrag);
+    p->kind = tStringFrag;
+    p->as.str.label = label;
+    p->as.str.str = str;
+    return p;
+}
+
+void Add_Frag(Frag frag) {
+    switch (frag->kind) {
+        case tStringFrag:
+            _string_frags = DataListAppend(_string_frags, frag);
+            break;
+        case tProcFrag:
+            _proc_frags = DataListAppend(_proc_frags, frag);
+            break;
+        default:
+            assert(false);
+    }
+}

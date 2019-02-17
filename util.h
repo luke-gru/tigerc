@@ -27,6 +27,7 @@ List IntList(int i, List next);
 List BoolList(bool b, List next);
 
 List vDataList(int n, ...);
+List DataListAppend(List list, void *data);
 
 // append list2 to end of list1
 List JoinList(List list1, List list2);

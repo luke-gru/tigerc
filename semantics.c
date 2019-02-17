@@ -451,7 +451,7 @@ static ExprTy CheckIntExpr(N_Expr expr) {
 }
 
 static ExprTy CheckStringExpr(N_Expr expr) {
-    return ExprType(NULL, Ty_String());
+    return ExprType(Tr_StringExpr(expr->as.stringVal), Ty_String());
 }
 
 static ExprTy CheckCallExpr(N_Expr expr) {

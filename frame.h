@@ -13,6 +13,17 @@ struct sFAccess; // machine dependent, either reg or stack
 typedef struct sFrame *Frame;
 typedef struct sFAccess *FAccess;
 
+typedef struct sFrag *Frag;
+struct sFrag {
+    enum { tStringFrag, tProcFrag } kind;
+    union {
+        struct { TempLabel label; string str; } str;
+        struct { IrStmt stmt; Frame frame; } proc;
+    } as;
+};
+Frag String_Frag(TempLabel label, string str);
+void Add_Frag(Frag frag);
+
 Frame NewFrame(TempLabel name, List formalEscapes);
 TempLabel FrameName(Frame fr);
 List FrameFormals(Frame fr);
