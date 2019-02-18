@@ -54,7 +54,7 @@ interpreter: build lex.yy.o
 
 .PHONY: parser
 parser: build parse.tab.o lex.yy.o
-	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parser_driver.c parse.tab.o lex.yy.o types.c semantics.c env.c temp.c translate.c frame_mips.c ir.c ir_pp.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_PARSER_DEBUG}
+	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parser_driver.c parse.tab.o lex.yy.o types.c semantics.c env.c temp.c translate.c frame_mips.c ir.c ir_pp.c canon.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_PARSER_DEBUG}
 
 .PHONY: build
 build:

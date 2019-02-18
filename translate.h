@@ -67,6 +67,8 @@ TrExpr Tr_WhileExpr(TrExpr cond, TrExpr body);
 TrExpr Tr_ForExpr(TrAccess access, TrExpr lo, TrExpr hi, TrExpr body);
 TrExpr Tr_CallExpr(TrLevel level, TempLabel label, List/*<TrExpr>*/ args);
 TrExpr Tr_StringExpr(string str);
+TrExpr Tr_SeqExpr(List/*<TrExpr>*/ exprs);
+TrExpr Tr_NoExp(void);
 
 TrExpr Tr_Ex(IrExpr irExpr);
 TrExpr Tr_Nx(IrStmt irStmt);
@@ -78,5 +80,19 @@ struct sTrCx Tr_UnCx(TrExpr expr);
 
 void Tr_PPExprs(List/*<TrExpr>*/ exprs);
 void Tr_PPExpr(TrExpr expr);
+
+typedef struct sFrag *Frag;
+struct sFrag {
+    enum { tStringFrag, tProcFrag } kind;
+    union {
+        struct { TempLabel label; string str; } str;
+        struct { IrStmt stmt; Frame frame; } proc;
+    } as;
+};
+Frag String_Frag(TempLabel label, string str);
+Frag Proc_Frag(IrStmt stmt, Frame frame);
+void Add_Frag(Frag frag);
+
+List/*<Frag>*/ Tr_getResult(void);
 
 #endif

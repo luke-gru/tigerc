@@ -21,12 +21,10 @@ int main(int argc, char **argv) {
     if (expr) {
         pr_exp(stderr, expr, -1);
         fprintf(stdout, "\nParsing succeeded\n");
-        ExprTy tyCheckRes = TypeCheck(expr);
-        (void)tyCheckRes;
+        List frags = TypeCheck(expr);
         if (EM_errors == 0) {
             fprintf(stdout, "Type check succeeded\n");
-            PP_Frags(stdout);
-            Tr_PPExpr(tyCheckRes.trExpr);
+            PP_Frags(frags, stdout);
         } else {
             fprintf(stderr, "Type check failed\n");
         }

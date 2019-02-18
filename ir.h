@@ -21,7 +21,7 @@ typedef enum {
 struct sIrStmt {
     enum { tIrSeq, tIrLabel, tIrJump, tIrCjump, tIrMove, tIrExpr } kind;
     union {
-        List seq;
+        List/*<IrStmt>*/ seq;
         TempLabel label;
         struct { IrExpr expr; List jumps; } jump;
         struct { IrRelop op; IrExpr left, right; TempLabel t, f; } cjump;
@@ -30,7 +30,7 @@ struct sIrStmt {
     } as;
 };
 
-IrStmt Ir_Seq_Stmt(List seq);
+IrStmt Ir_Seq_Stmt(List/*<IrStmt>*/ seq);
 IrStmt Ir_Label_Stmt(TempLabel label);
 IrStmt Ir_Jump_Stmt(IrExpr expr, List jumps);
 IrStmt Ir_Cjump_Stmt(IrRelop op,
@@ -57,6 +57,7 @@ struct sIrExpr {
 IrExpr Ir_Binop_Expr(IrBinop op, IrExpr left, IrExpr right);
 IrExpr Ir_Mem_Expr(IrExpr mem);
 IrExpr Ir_Tmp_Expr(Temp tmp);
+// statement followed by expression
 IrExpr Ir_Eseq_Expr(IrStmt stmt, IrExpr expr);
 IrExpr Ir_Name_Expr(TempLabel name);
 IrExpr Ir_Const_Expr(int const_);

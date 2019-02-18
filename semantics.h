@@ -11,6 +11,6 @@ typedef struct sExprTy ExprTy;
 
 struct sExprTy ExprType(TrExpr trExpr, Ty ty);
 
-ExprTy TypeCheck(N_Expr program);
+List/*<Frag>*/ TypeCheck(N_Expr program);
 
 #endif

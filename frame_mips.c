@@ -1,12 +1,12 @@
 #include "util.h"
 #include "frame.h"
 #include "ir.h"
+#include "translate.h"
+#include "ir_pp.h"
+#include "canon.h"
 
 #define FRAME_ARGS_REG 4
 const int FRAME_WORD_SIZE = 4;
-
-static List _string_frags = NULL;
-static List _proc_frags = NULL;
 
 struct sFrame {
     TempLabel name;
@@ -143,58 +143,23 @@ int Frame_Offset(FAccess faccess) {
     return faccess->as.offset;
 }
 
-Frag String_Frag(TempLabel label, string str) {
-    Frag p = CHECKED_MALLOC(struct sFrag);
-    p->kind = tStringFrag;
-    p->as.str.label = label;
-    p->as.str.str = str;
-    return p;
-}
-
-Frag Proc_Frag(IrStmt stmt, Frame frame) {
-    Frag p = CHECKED_MALLOC(struct sFrag);
-    p->kind = tProcFrag;
-    p->as.proc.stmt = stmt;
-    p->as.proc.frame = frame;
-    return p;
-}
-
-void Add_Frag(Frag frag) {
-    switch (frag->kind) {
-        case tStringFrag:
-            _string_frags = DataListAppend(_string_frags, frag);
-            break;
-        case tProcFrag:
-            _proc_frags = DataListAppend(_proc_frags, frag);
-            break;
-        default:
-            assert(false);
-    }
-}
-
-void PP_Frags(FILE *out) {
+void PP_Frags(List frags, FILE *out) {
     List p;
-
-    fprintf(out, "STRING FRAGMENTS:\n");
-    for (p = _string_frags; p; p = p->next) {
+    for (p = frags; p; p = p->next) {
         Frag frag = (Frag)p->data;
-        fprintf(out, "    %s: \"%s\"\n",
-                LabelString(frag->as.str.label),
-                frag->as.str.str);
+        if (frag->kind == tStringFrag) {
+            /*fprintf(out, "STRING FRAGMENTS:\n");*/
+            fprintf(out, "    %s: \"%s\"\n",
+                    LabelString(frag->as.str.label),
+                    frag->as.str.str);
+        } else {
+            fprintf(out, "    %s:\n", LabelString(frag->as.proc.frame->name));
+            List stmtList = C_Linearize(frag->as.proc.stmt);
+            Ir_PP_Stmts(out, stmtList);
+            fprintf(out, "\n");
+            /*fprintf(out, "FUNCTION FRAGMENTS:\n");*/
+        }
     }
-    if (_string_frags == NULL) {
-        fprintf(out ,"None");
-    }
-    fprintf(out, "\n");
 
-    fprintf(out, "FUNCTION FRAGMENTS:\n");
-    for (p = _proc_frags; p; p = p->next) {
-        Frag frag = (Frag)p->data;
-        fprintf(out, "    %s:\n", LabelString(frag->as.proc.frame->name));
-        fprintf(out, "\n");
-    }
-    if (_proc_frags == NULL) {
-        fprintf(out, "None");
-    }
     fprintf(out, "\n");
 }

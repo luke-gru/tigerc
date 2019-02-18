@@ -14,19 +14,6 @@ struct sFAccess; // machine dependent, either reg or stack
 typedef struct sFrame *Frame;
 typedef struct sFAccess *FAccess;
 
-typedef struct sFrag *Frag;
-struct sFrag {
-    enum { tStringFrag, tProcFrag } kind;
-    union {
-        struct { TempLabel label; string str; } str;
-        struct { IrStmt stmt; Frame frame; } proc;
-    } as;
-};
-Frag String_Frag(TempLabel label, string str);
-Frag Proc_Frag(IrStmt stmt, Frame frame);
-void Add_Frag(Frag frag);
-void PP_Frags(FILE *out);
-
 Frame NewFrame(TempLabel name, List formalEscapes);
 TempLabel FrameName(Frame fr);
 List FrameFormals(Frame fr);
@@ -39,6 +26,9 @@ IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args);
 int Frame_Offset(FAccess faccess);
 
 IrStmt Frame_Proc_Entry_Exit_1(Frame fr, IrStmt stmt);
+
+// needs access to frame internals, so needs to go here
+void PP_Frags(List/*<Frag>*/ frags, FILE *out);
 
 
 #endif

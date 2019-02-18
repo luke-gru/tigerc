@@ -6,6 +6,9 @@
 
 static TrLevel _outermost = NULL;
 
+static List _string_frags = NULL;
+static List _proc_frags = NULL;
+
 TrLevel Tr_Outermost(void) {
     if (!_outermost) {
         _outermost = Tr_NewLevel(NULL, NewLabel(), NULL);
@@ -135,7 +138,7 @@ TrExpr Tr_SubscriptVar(TrExpr array, TrExpr index) {
     return Tr_Ex(Ir_Mem_Expr(
         Ir_Binop_Expr(
             IR_PLUS,
-            Ir_Mem_Expr(Tr_UnEx(array)),
+            Tr_UnEx(array),
             Ir_Binop_Expr(
                 IR_MUL,
                 Tr_UnEx(index),
@@ -231,6 +234,21 @@ TrExpr Tr_CallExpr(TrLevel level, TempLabel label, List/*<TrExpr>*/ args) {
         l_next = l_next->next = DataList(Tr_UnEx(args->data), NULL);
     }
     return Tr_Ex(Ir_Call_Expr(func, l_args));
+}
+
+// expects `exprs` in reverse order, with result in head position
+// zips them up to create a tree of EseqExprs, in correct order (reverse of given)
+TrExpr Tr_SeqExpr(List/*<TrExpr>*/ exprs) {
+	IrExpr result = Tr_UnEx((TrExpr)exprs->data);
+  List p;
+	for (p = exprs->next; p; p = p->next) {
+		result = Ir_Eseq_Expr(Ir_Expr_Stmt(Tr_UnEx((TrExpr)p->data)), result);
+  }
+	return Tr_Ex(result);
+}
+
+TrExpr Tr_NoExp(void) {
+	return Tr_Ex(Ir_Const_Expr(0));
 }
 
 TrExpr Tr_StringExpr(string str) {
@@ -337,3 +355,44 @@ void Tr_PPExprs(List/*<TrExpr>*/ exprs) {
         exprs = exprs->next;
     }
 }
+
+// Returns list of fragments, strings then procs.
+// NOTE: only call this once!
+List/*<Frag>*/ Tr_getResult(void) {
+    List cursor = NULL, prev = NULL;
+    for (cursor = _string_frags; cursor; cursor = cursor->next) {
+        prev = cursor;
+    }
+    if (prev) prev->next = _proc_frags;
+    return _string_frags ? _string_frags : _proc_frags;
+}
+
+Frag String_Frag(TempLabel label, string str) {
+    Frag p = CHECKED_MALLOC(struct sFrag);
+    p->kind = tStringFrag;
+    p->as.str.label = label;
+    p->as.str.str = str;
+    return p;
+}
+
+Frag Proc_Frag(IrStmt stmt, Frame frame) {
+    Frag p = CHECKED_MALLOC(struct sFrag);
+    p->kind = tProcFrag;
+    p->as.proc.stmt = stmt;
+    p->as.proc.frame = frame;
+    return p;
+}
+
+void Add_Frag(Frag frag) {
+    switch (frag->kind) {
+        case tStringFrag:
+            _string_frags = DataListAppend(_string_frags, frag);
+            break;
+        case tProcFrag:
+            _proc_frags = DataListAppend(_proc_frags, frag);
+            break;
+        default:
+            assert(false);
+    }
+}
+

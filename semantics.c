@@ -284,11 +284,20 @@ static ExprTy CheckDecl(N_Decl decl) {
     }
 }
 
-static int CheckDecls(List decls) {
-    if (decls == NULL) return 0;
-    N_Decl decl = (N_Decl)decls->data;
-    CheckDecl(decl);
-    return CheckDecls(decls->next);
+// returns a list of declarations, in reverse order of found decls
+static List/*<TrExpr>*/ CheckDecls(List decls) {
+    List ret = NULL;
+    while (decls) {
+        N_Decl decl = (N_Decl)decls->data;
+        ExprTy res = CheckDecl(decl);
+        if (ret == NULL) {
+            ret = DataList(res.trExpr, NULL);
+        } else {
+            ret = DataList(res.trExpr, ret);
+        }
+        decls = decls->next;
+    }
+    return ret;
 }
 
 // LET
@@ -298,11 +307,13 @@ static int CheckDecls(List decls) {
 static ExprTy CheckLetExpr(N_Expr expr) {
     SymTableBeginScope(tEnv);
     SymTableBeginScope(vEnv);
-    CheckDecls(expr->as.let.decls);
+    List exprList = CheckDecls(expr->as.let.decls);
+    assert(exprList);
     ExprTy res = CheckExpr(expr->as.let.body);
+    exprList = DataList(res.trExpr, exprList); // prepend result
     SymTableEndScope(vEnv);
     SymTableEndScope(tEnv);
-    return res;
+    return ExprType(Tr_SeqExpr(exprList), res.ty);
 }
 
 static ExprTy CheckSimpleVar(N_Var var) {
@@ -376,11 +387,20 @@ static ExprTy CheckVarExpr(N_Expr expr) {
 static ExprTy CheckSeqExpr(N_Expr expr) {
     List exprList = expr->as.seq;
     ExprTy ret = VoidExprTy();
+    List retList = NULL;
     while (exprList) {
         ret = CheckExpr((N_Expr)exprList->data);
+        if (retList) {
+            retList = DataList(ret.trExpr, retList); // prepend
+        } else {
+            retList = DataList(ret.trExpr, NULL);
+        }
         exprList = exprList->next;
     }
-    return ret;
+    if (!retList) {
+        retList = DataList(Tr_NoExp(), NULL);
+    }
+    return ExprType(Tr_SeqExpr(retList), Ty_Void());
 }
 
 static ExprTy CheckAssignExpr(N_Expr expr) {
@@ -649,9 +669,10 @@ struct sExprTy ExprType(TrExpr trExpr, Ty ty) {
     return e;
 }
 
-ExprTy TypeCheck(N_Expr program) {
+List/*<Frag>*/ TypeCheck(N_Expr program) {
     tEnv = E_Base_tEnv();
     vEnv = E_Base_vEnv();
     curLevel = Tr_Outermost();
-    return CheckExpr(program);
+    CheckExpr(program);
+    return Tr_getResult();
 }
