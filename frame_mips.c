@@ -171,3 +171,30 @@ void Add_Frag(Frag frag) {
             assert(false);
     }
 }
+
+void PP_Frags(FILE *out) {
+    List p;
+
+    fprintf(out, "STRING FRAGMENTS:\n");
+    for (p = _string_frags; p; p = p->next) {
+        Frag frag = (Frag)p->data;
+        fprintf(out, "    %s: \"%s\"\n",
+                LabelString(frag->as.str.label),
+                frag->as.str.str);
+    }
+    if (_string_frags == NULL) {
+        fprintf(out ,"None");
+    }
+    fprintf(out, "\n");
+
+    fprintf(out, "FUNCTION FRAGMENTS:\n");
+    for (p = _proc_frags; p; p = p->next) {
+        Frag frag = (Frag)p->data;
+        fprintf(out, "    %s:\n", LabelString(frag->as.proc.frame->name));
+        fprintf(out, "\n");
+    }
+    if (_proc_frags == NULL) {
+        fprintf(out, "None");
+    }
+    fprintf(out, "\n");
+}

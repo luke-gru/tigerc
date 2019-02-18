@@ -6,6 +6,7 @@
 #include "parse.h"
 #include "print_ast.h"
 #include "semantics.h"
+#include "frame.h"
 
 extern int yyparse(void);
 extern int yydebug;
@@ -24,6 +25,7 @@ int main(int argc, char **argv) {
         (void)tyCheckRes;
         if (EM_errors == 0) {
             fprintf(stdout, "Type check succeeded\n");
+            PP_Frags(stdout);
             Tr_PPExpr(tyCheckRes.trExpr);
         } else {
             fprintf(stderr, "Type check failed\n");

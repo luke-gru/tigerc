@@ -1,6 +1,7 @@
 #ifndef tiger_frame_h
 #define tiger_frame_h
 
+#include <stdio.h>
 #include "util.h"
 #include "temp.h"
 #include "ir.h"
@@ -24,6 +25,7 @@ struct sFrag {
 Frag String_Frag(TempLabel label, string str);
 Frag Proc_Frag(IrStmt stmt, Frame frame);
 void Add_Frag(Frag frag);
+void PP_Frags(FILE *out);
 
 Frame NewFrame(TempLabel name, List formalEscapes);
 TempLabel FrameName(Frame fr);
@@ -37,5 +39,6 @@ IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args);
 int Frame_Offset(FAccess faccess);
 
 IrStmt Frame_Proc_Entry_Exit_1(Frame fr, IrStmt stmt);
+
 
 #endif
