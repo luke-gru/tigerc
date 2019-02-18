@@ -102,6 +102,20 @@ Temp Frame_fp(void) {
     return _fp;
 }
 
+// return value always in same temp
+Temp Frame_rv(void) {
+    static Temp _rv = NULL;
+
+    if (!_rv) {
+        _rv = NewTemp();
+    }
+    return _rv;
+}
+
+IrStmt Frame_Proc_Entry_Exit_1(Frame fr, IrStmt stmt) {
+    return stmt; // TODO
+}
+
 // return IR for frame access relative to `fp` if in memory,
 // or the register itself if in register.
 IrExpr Frame_Expr(FAccess faccess, IrExpr fp) {
@@ -134,6 +148,14 @@ Frag String_Frag(TempLabel label, string str) {
     p->kind = tStringFrag;
     p->as.str.label = label;
     p->as.str.str = str;
+    return p;
+}
+
+Frag Proc_Frag(IrStmt stmt, Frame frame) {
+    Frag p = CHECKED_MALLOC(struct sFrag);
+    p->kind = tProcFrag;
+    p->as.proc.stmt = stmt;
+    p->as.proc.frame = frame;
     return p;
 }
 

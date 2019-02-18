@@ -22,6 +22,7 @@ struct sFrag {
     } as;
 };
 Frag String_Frag(TempLabel label, string str);
+Frag Proc_Frag(IrStmt stmt, Frame frame);
 void Add_Frag(Frag frag);
 
 Frame NewFrame(TempLabel name, List formalEscapes);
@@ -30,8 +31,11 @@ List FrameFormals(Frame fr);
 FAccess FrameAllocLocal(Frame fr, bool escape);
 
 Temp Frame_fp(void);
+Temp Frame_rv(void);
 IrExpr Frame_Expr(FAccess faccess, IrExpr fp);
 IrExpr Frame_ExternalCall(string fnName, List/*<IrExpr>*/ args);
 int Frame_Offset(FAccess faccess);
+
+IrStmt Frame_Proc_Entry_Exit_1(Frame fr, IrStmt stmt);
 
 #endif

@@ -255,9 +255,14 @@ static void CheckFunDecls(N_Decl decl) {
         curLevel = funcEntry->as.fun.level;
         ExprTy bodyRes = CheckExpr(funcDecl->body);
 #if PRINT_DECLS
-    fprintf(stdout, "Function decl '%s' IR:\n", SymName(funcDecl->name));
-    Tr_PPExpr(bodyRes.trExpr);
+        fprintf(stdout, "Function decl '%s' IR:\n", SymName(funcDecl->name));
+        Tr_PPExpr(bodyRes.trExpr);
 #endif
+
+        Add_Frag(Proc_Frag(Ir_Move_Stmt(
+                    Ir_Tmp_Expr(Frame_rv()),
+                    Tr_UnEx(bodyRes.trExpr)),
+                curLevel->frame));
         curLevel = oldLevel;
         SymTableEndScope(vEnv);
         funcs = funcs->next;
@@ -348,7 +353,7 @@ static ExprTy CheckSubscriptVar(N_Var svar) {
     if (indexRes.ty->kind != tTyInt) {
         CheckError(exprVar->pos, "array index needs to be of type int");
     }
-    return ExprType(NULL, arrayRes.ty->as.array);
+    return ExprType(Tr_SubscriptVar(arrayRes.trExpr, indexRes.trExpr), arrayRes.ty->as.array);
 }
 
 static ExprTy CheckVar(N_Var var) {

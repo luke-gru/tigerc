@@ -131,6 +131,20 @@ TrExpr Tr_RecordExpr(List/*<TrExpr>*/ fieldExprs, int fieldSize) {
         addr));
 }
 
+TrExpr Tr_SubscriptVar(TrExpr array, TrExpr index) {
+    return Tr_Ex(Ir_Mem_Expr(
+        Ir_Binop_Expr(
+            IR_PLUS,
+            Ir_Mem_Expr(Tr_UnEx(array)),
+            Ir_Binop_Expr(
+                IR_MUL,
+                Tr_UnEx(index),
+                Ir_Const_Expr(FRAME_WORD_SIZE)
+            )
+        )
+    ));
+}
+
 static void FillPatch(List patches, TempLabel label) {
     List p = patches;
     for (; p; p = p->next) {
