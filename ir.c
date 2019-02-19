@@ -104,3 +104,31 @@ IrExpr Ir_Call_Expr(IrExpr func, List args) {
     p->as.call.args = args;
     return p;
 }
+
+IrRelop Ir_NotRel(IrRelop op) {
+    switch (op) {
+    case IR_EQ:
+        return IR_NE;
+    case IR_NE:
+        return IR_EQ;
+    case IR_LT:
+        return IR_GE;
+    case IR_LE:
+        return IR_GT;
+    case IR_GT:
+        return IR_LE;
+    case IR_GE:
+        return IR_LT;
+    case IR_ULT:
+        return IR_UGE;
+    case IR_ULE:
+        return IR_UGT;
+    case IR_UGT:
+        return IR_ULE;
+    case IR_UGE:
+        return IR_ULT;
+    default:
+        assert(0);
+    }
+}
+

@@ -63,4 +63,6 @@ IrExpr Ir_Name_Expr(TempLabel name);
 IrExpr Ir_Const_Expr(int const_);
 IrExpr Ir_Call_Expr(IrExpr func, List args);
 
+IrRelop Ir_NotRel(IrRelop op);
+
 #endif

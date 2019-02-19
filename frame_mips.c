@@ -154,7 +154,10 @@ void PP_Frags(List frags, FILE *out) {
                     frag->as.str.str);
         } else {
             fprintf(out, "    %s:\n", LabelString(frag->as.proc.frame->name));
+            /*List stmtList = DataList(frag->as.proc.stmt, NULL);*/
             List stmtList = C_Linearize(frag->as.proc.stmt);
+            /*stmtList = C_TraceSchedule(C_BasicBlocks(stmtList));*/
+            /*assert(stmtList);*/
             Ir_PP_Stmts(out, stmtList);
             fprintf(out, "\n");
             /*fprintf(out, "FUNCTION FRAGMENTS:\n");*/

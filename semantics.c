@@ -259,10 +259,7 @@ static void CheckFunDecls(N_Decl decl) {
         Tr_PPExpr(bodyRes.trExpr);
 #endif
 
-        Add_Frag(Proc_Frag(Ir_Move_Stmt(
-                    Ir_Tmp_Expr(Frame_rv()),
-                    Tr_UnEx(bodyRes.trExpr)),
-                curLevel->frame));
+        Add_Frag(Proc_Frag(Tr_UnNx(bodyRes.trExpr), curLevel->frame));
         curLevel = oldLevel;
         SymTableEndScope(vEnv);
         funcs = funcs->next;

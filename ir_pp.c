@@ -9,8 +9,8 @@ static void pp_expr(FILE *out, int d, IrExpr expr);
 static void indent(FILE *out, int d) {
     int i;
 
-    for (i = 0; i <= d; ++i) {
-        fprintf(out, "    ");
+    for (i = 0; i < d; ++i) {
+        fprintf(out, " ");
     }
 }
 
@@ -97,6 +97,7 @@ static void pp_stmt(FILE *out, int d, IrStmt stmt) {
             break;
 
         default:
+            fprintf(stderr, "Error: found stmt kind %d\n", stmt->kind);
             assert(false);
     }
 }
@@ -167,7 +168,6 @@ void pp_expr(FILE *out, int d, IrExpr expr)
 
 void Ir_PP_Stmts(FILE *out, List stmts) {
     for (; stmts; stmts = stmts->next) {
-        assert(out);
-        pp_stmt(out, 0, stmts->data);
+        pp_stmt(out, 0, (IrStmt)stmts->data);
     }
 }

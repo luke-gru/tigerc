@@ -17,7 +17,7 @@ struct C_StmtExpr {
 
 struct C_Block {
     List/*<IrStmt>*/ stmts;
-    TempLabel label;
+    TempLabel label; // done label
 };
 
 List/*<IrStmt>*/ C_Linearize(IrStmt stmt);
