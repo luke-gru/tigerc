@@ -15,9 +15,12 @@ struct C_StmtExpr {
     IrExpr e;
 };
 
+typedef struct C_stmListList_ *C_stmListList;
+struct C_stmListList_ { List/*<IrStmt>*/ head; C_stmListList tail;};
+
 struct C_Block {
-    List/*<IrStmt>*/ stmts;
-    TempLabel label; // done label
+    C_stmListList stmLists;
+    TempLabel label;
 };
 
 List/*<IrStmt>*/ C_Linearize(IrStmt stmt);

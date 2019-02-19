@@ -11,8 +11,8 @@ struct expRefList_ {
 /* local function prototypes */
 static IrStmt do_stm(IrStmt stm);
 static struct C_StmtExpr do_exp(IrExpr exp);
-/*static List mkBlocks(IrStmtList stms, TempLabel done);*/
-/*static List getNext(void);*/
+static C_stmListList mkBlocks(List stms, TempLabel done);
+static List getNext(void);
 
 static expRefList ExpRefList(IrExpr *head, expRefList tail) {
 	expRefList p = (expRefList)checked_malloc(sizeof *p);
@@ -146,4 +146,152 @@ static List linear(IrStmt stm, List right) {
       2.  The parent of every CALL is an EXP(..) or a MOVE(TEMP t,..) */
 List C_Linearize(IrStmt stm) {
     return linear(do_stm(stm), NULL);
+}
+
+static C_stmListList StmListList(List head, C_stmListList tail) {
+	C_stmListList p = (C_stmListList)checked_malloc(sizeof *p);
+	p->head = head;
+	p->tail = tail;
+	return p;
+}
+
+/* Go down a list looking for end of basic block */
+static C_stmListList next(List prevstms, List stms, TempLabel done)
+{
+	if (!stms)
+		return next(prevstms,
+			DataList(Ir_Jump_Stmt(Ir_Name_Expr(done), DataList(done, NULL)), NULL), done);
+	if (((IrStmt)stms->data)->kind == tIrJump || ((IrStmt)stms->data)->kind == tIrCjump) {
+		C_stmListList stmLists;
+		prevstms->next = stms;
+		stmLists = mkBlocks(stms->next, done);
+		stms->next = NULL;
+		return stmLists;
+	} else if (((IrStmt)stms->data)->kind == tIrLabel) {
+		TempLabel lab = ((IrStmt)stms->data)->as.label;
+		return next(prevstms, DataList(Ir_Jump_Stmt(Ir_Name_Expr(lab), DataList(lab, NULL)), stms), done);
+	} else {
+		prevstms->next = stms;
+		return next(stms, stms->next, done);
+	}
+}
+
+/* Create the beginning of a basic block */
+static C_stmListList mkBlocks(List stms, TempLabel done)
+{
+	if (!stms) {
+		return NULL;
+	}
+	if (((IrStmt)stms->data)->kind != tIrLabel) {
+		return mkBlocks(DataList(Ir_Label_Stmt(NewLabel()), stms), done);
+	}
+	/* else there already is a label */
+	return StmListList(stms, next(stms, stms->next, done));
+}
+
+		/* basicBlocks : Tree.stm list -> (Tree.stm list list * Tree.label)
+		   From a list of cleaned trees, produce a list of
+		   basic blocks satisfying the following properties:
+		   1. and 2. as above;
+		   3.  Every block begins with a LABEL;
+		   4.  A LABEL appears only at the beginning of a block;
+		   5.  Any JUMP or CJUMP is the last stm in a block;
+		   6.  Every block ends with a JUMP or CJUMP;
+		   Also produce the "label" to which control will be passed
+		   upon exit.
+		 */
+struct C_Block C_BasicBlocks(List stmList)
+{
+	struct C_Block b;
+	b.label = NewLabel();
+	b.stmLists = mkBlocks(stmList, b.label);
+
+	return b;
+}
+
+static SymTable block_env;
+static struct C_Block global_block;
+
+static List getLast(List list)
+{
+	List last = list;
+	while (last->next->next)
+		last = last->next;
+	return last;
+}
+
+static void trace(List list)
+{
+	List last = getLast(list);
+	IrStmt lab = list->data;
+	IrStmt s = last->next->data;
+	SymTableEnter(block_env, lab->as.label, NULL);
+	if (s->kind == tIrJump) {
+		List target = (List)SymTableLookup(block_env, s->as.jump.jumps->data);
+		if (!s->as.jump.jumps->next && target) {
+			last->next = target;	/* merge the 2 lists removing JUMP stm */
+			trace(target);
+		} else
+			last->next->next = getNext();	/* merge and keep JUMP stm */
+	}
+	/* we want false label to follow CJUMP */
+	else if (s->kind == tIrCjump) {
+		List trues = (List)SymTableLookup(block_env, s->as.cjump.t);
+		List falses = (List)SymTableLookup(block_env, s->as.cjump.f);
+		if (falses) {
+			last->next->next = falses;
+			trace(falses);
+		} else if (trues) {	/* convert so that existing label is a false label */
+			last->next->data = Ir_Cjump_Stmt(Ir_NotRel(s->as.cjump.op),
+				s->as.cjump.left, s->as.cjump.right, s->as.cjump.f, s->as.cjump.t);
+			last->next->next = trues;
+			trace(trues);
+		} else {
+			TempLabel falsel = NewLabel();
+			last->next->data = Ir_Cjump_Stmt(s->as.cjump.op, s->as.cjump.left, s->as.cjump.right, s->as.cjump.t, falsel);
+			last->next->next = DataList(Ir_Label_Stmt(falsel), getNext());
+		}
+	}
+	else
+		assert(0);
+}
+
+/* get the next block from the list of stmLists, using only those that have
+ * not been traced yet */
+static List getNext()
+{
+	if (!global_block.stmLists)
+		return DataList(Ir_Label_Stmt(global_block.label), NULL);
+	else {
+		List s = global_block.stmLists->head;
+		if (SymTableLookup(block_env, ((IrStmt)s->data)->as.label)) {	/* label exists in the table */
+			trace(s);
+			return s;
+		} else {
+			global_block.stmLists = global_block.stmLists->tail;
+			return getNext();
+		}
+	}
+}
+		 /* traceSchedule : Tree.stm list list * Tree.label -> Tree.stm list
+		    From a list of basic blocks satisfying properties 1-6,
+		    along with an "exit" label,
+		    produce a list of stms such that:
+		    1. and 2. as above;
+		    7. Every CJUMP(_,t,f) is immediately followed by LABEL f.
+		    The blocks are reordered to satisfy property 7; also
+		    in this reordering as many JUMP(T.NAME(lab)) statements
+		    as possible are eliminated by falling through into T.LABEL(lab).
+		  */
+List C_TraceSchedule(struct C_Block b)
+{
+	C_stmListList sList;
+	block_env = MakeSymTable();
+	global_block = b;
+
+	for (sList = global_block.stmLists; sList; sList = sList->tail) {
+		SymTableEnter(block_env, ((IrStmt)sList->head->data)->as.label, sList->head);
+	}
+
+	return getNext();
 }
