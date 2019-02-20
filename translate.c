@@ -375,11 +375,12 @@ Frag String_Frag(TempLabel label, string str) {
     return p;
 }
 
-Frag Proc_Frag(IrStmt stmt, Frame frame) {
+Frag Proc_Frag(IrStmt stmt, Frame frame, TempLabel name) {
     Frag p = CHECKED_MALLOC(struct sFrag);
     p->kind = tProcFrag;
     p->as.proc.stmt = stmt;
     p->as.proc.frame = frame;
+    p->as.proc.name = name;
     return p;
 }
 

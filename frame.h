@@ -19,6 +19,9 @@ TempLabel FrameName(Frame fr);
 List FrameFormals(Frame fr);
 FAccess FrameAllocLocal(Frame fr, bool escape);
 
+List Frame_caller_saves(void);
+bool Frame_doesEscape(FAccess faccess);
+
 Temp Frame_fp(void);
 Temp Frame_rv(void);
 IrExpr Frame_Expr(FAccess faccess, IrExpr fp);

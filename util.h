@@ -20,7 +20,10 @@ typedef struct sList *List;
 
 #define CHECKED_MALLOC(type) (type*)checked_malloc(sizeof(type));
 void *checked_malloc(size_t sz);
+void *checked_realloc(void *p, size_t sz);
 string String(string);
+string String_format(const char *, ...);
+string String_from_int(int n);
 
 List DataList(void *data, List next);
 List IntList(int i, List next);

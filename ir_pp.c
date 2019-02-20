@@ -124,7 +124,7 @@ void pp_expr(FILE *out, int d, IrExpr expr)
 
         case tIrTmp:
             indent(out, d);
-            fprintf(out, "TEMP t%d\n", expr->as.tmp->num);
+            fprintf(out, "TEMP t%s\n", TempTableLookup(Temp_NameMap(), expr->as.tmp));
             break;
 
         case tIrEseq:

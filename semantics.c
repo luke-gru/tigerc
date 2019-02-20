@@ -10,7 +10,7 @@
 #include "frame.h"
 #include "temp.h"
 
-#define PRINT_DECLS 1
+#define PRINT_DECLS 0
 
 #define CHECK_DEBUG(msg, ...) CheckDebug(msg, ##__VA_ARGS__)
 
@@ -259,7 +259,7 @@ static void CheckFunDecls(N_Decl decl) {
         Tr_PPExpr(bodyRes.trExpr);
 #endif
 
-        Add_Frag(Proc_Frag(Tr_UnNx(bodyRes.trExpr), curLevel->frame));
+        Add_Frag(Proc_Frag(Tr_UnNx(bodyRes.trExpr), curLevel->frame, funcDecl->name));
         curLevel = oldLevel;
         SymTableEndScope(vEnv);
         funcs = funcs->next;

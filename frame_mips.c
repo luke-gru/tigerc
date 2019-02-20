@@ -143,6 +143,18 @@ int Frame_Offset(FAccess faccess) {
     return faccess->as.offset;
 }
 
+List Frame_caller_saves(void) {
+    static List caller_saves = NULL;
+    if (!caller_saves) {
+        caller_saves = DataList(NULL, 0); // TODO
+    }
+    return caller_saves;
+}
+
+bool Frame_doesEscape(FAccess access) {
+	return (access != NULL && access->kind == tAccessFrame);
+}
+
 void PP_Frags(List frags, FILE *out) {
     List p;
     for (p = frags; p; p = p->next) {

@@ -2,6 +2,7 @@
 #define tiger_symbol_h
 
 #include "util.h"
+#include "table.h"
 
 /*
  * symbol.h - Symbols and symbol tables

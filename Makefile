@@ -30,6 +30,7 @@ BUILD_DIR=bin
 BUILD_FILE_LEXER_DEBUG=tigerc_lex
 BUILD_FILE_INTERPRETER_DEBUG=tigerc_interp
 BUILD_FILE_PARSER_DEBUG=tigerc_parse
+BUILD_FILE_CODEGEN_DEBUG=tigerc_codegen
 
 # default
 .PHONY: lexer
@@ -55,6 +56,10 @@ interpreter: build lex.yy.o
 .PHONY: parser
 parser: build parse.tab.o lex.yy.o
 	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parser_driver.c parse.tab.o lex.yy.o types.c semantics.c env.c temp.c translate.c frame_mips.c ir.c ir_pp.c canon.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_PARSER_DEBUG}
+
+.PHONY: codegen
+codegen: build parse.tab.o lex.yy.o
+	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parse.tab.o lex.yy.o types.c semantics.c env.c temp.c translate.c frame_mips.c ir.c ir_pp.c canon.c codegen.c codegen_driver.c assem.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_CODEGEN_DEBUG}
 
 .PHONY: build
 build:

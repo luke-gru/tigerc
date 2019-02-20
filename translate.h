@@ -86,11 +86,11 @@ struct sFrag {
     enum { tStringFrag, tProcFrag } kind;
     union {
         struct { TempLabel label; string str; } str;
-        struct { IrStmt stmt; Frame frame; } proc;
+        struct { IrStmt stmt; Frame frame; TempLabel name; } proc;
     } as;
 };
 Frag String_Frag(TempLabel label, string str);
-Frag Proc_Frag(IrStmt stmt, Frame frame);
+Frag Proc_Frag(IrStmt stmt, Frame frame, TempLabel name);
 void Add_Frag(Frag frag);
 
 List/*<Frag>*/ Tr_getResult(void);
