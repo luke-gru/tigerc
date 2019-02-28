@@ -59,7 +59,11 @@ parser: build parse.tab.o lex.yy.o
 
 .PHONY: codegen
 codegen: build parse.tab.o lex.yy.o
-	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parse.tab.o lex.yy.o types.c semantics.c env.c temp.c translate.c frame_x86.c ir.c ir_pp.c canon.c codegen.c codegen_driver.c assem.c graph.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_CODEGEN_DEBUG}
+	${CC} ${CFLAGS} $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parse.tab.o lex.yy.o types.c semantics.c env.c temp.c translate.c frame_x86.c ir.c ir_pp.c canon.c codegen.c codegen_driver.c assem.c graph.c flowgraph.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/${BUILD_FILE_CODEGEN_DEBUG}
+
+.PHONY: test_ast
+test_ast: build parse.tab.o lex.yy.o
+	${CC} ${CFLAGS} -Ivendor/include -Itest/include $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parse.tab.o lex.yy.o vendor/vec.c test/test_ast.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/test_ast
 
 .PHONY: build
 build:
