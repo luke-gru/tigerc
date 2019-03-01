@@ -670,6 +670,8 @@ List/*<Frag>*/ TypeCheck(N_Expr program) {
     tEnv = E_Base_tEnv();
     vEnv = E_Base_vEnv();
     curLevel = Tr_Outermost();
-    CheckExpr(program);
+    ExprTy res = CheckExpr(program);
+    TempLabel mainLbl = NamedLabel("_main");
+    Add_Frag(Proc_Frag(Tr_UnNx(res.trExpr), curLevel->frame, mainLbl));
     return Tr_getResult();
 }

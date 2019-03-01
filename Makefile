@@ -65,6 +65,10 @@ codegen: build parse.tab.o lex.yy.o
 test_ast: build parse.tab.o lex.yy.o
 	${CC} ${CFLAGS} -Ivendor/include -Itest/include $(COMMON_SRCS) symbol.c table.c ast.c print_ast.c parse.tab.o lex.yy.o vendor/vec.c test/test_ast.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/test_ast
 
+.PHONY: test_ir
+test_ir: build parse.tab.o lex.yy.o
+	${CC} ${CFLAGS} -Ivendor/include -Itest/include $(COMMON_SRCS) symbol.c table.c ast.c semantics.c temp.c translate.c ir.c ir_pp.c types.c env.c canon.c frame_x86.c parse.tab.o lex.yy.o vendor/vec.c test/test_ir.c ${DEBUG_FLAGS} -o ${BUILD_DIR}/test_ir
+
 .PHONY: build
 build:
 	mkdir -p ${BUILD_DIR}
